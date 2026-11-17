@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Interplanetary Voyage</title>
+<link rel="icon" href="data:,">
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Arabic",sans-serif;color:#e8fbff}
+#cv{position:fixed;inset:0;width:100%;height:100%;touch-action:none;display:block}
+.hud{position:fixed;pointer-events:none;z-index:5}
+.pill{background:rgba(6,20,30,.72);border:1px solid rgba(80,230,255,.35);border-radius:14px;padding:6px 12px;font-weight:700;font-size:15px;box-shadow:0 0 12px rgba(0,200,255,.15)}
+#res{top:max(8px,env(safe-area-inset-top));inset-inline-start:10px;display:flex;gap:8px}
+#clock{top:max(8px,env(safe-area-inset-top));left:50%;transform:translateX(-50%)}
+#topR{top:max(8px,env(safe-area-inset-top));inset-inline-end:10px;display:flex;gap:8px}
+.btn{pointer-events:auto;background:rgba(6,24,36,.82);border:1px solid rgba(80,230,255,.5);color:#dff9ff;border-radius:14px;min-width:46px;height:46px;padding:0 12px;font-size:20px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;box-shadow:0 0 14px rgba(0,210,255,.18)}
+.btn:active{transform:scale(.95);background:rgba(20,70,90,.9)}
+.btn small{font-size:13px}
+.btn.on{background:rgba(0,150,190,.85)}
+#acts{bottom:max(10px,env(safe-area-inset-bottom));inset-inline-end:10px;display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+#mini{position:fixed;bottom:max(10px,env(safe-area-inset-bottom));inset-inline-start:10px;width:130px;height:130px;border:1px solid rgba(80,230,255,.5);border-radius:10px;z-index:5;background:#000;touch-action:none}
+#hint{bottom:max(14px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);max-width:min(560px,62vw);text-align:center;font-size:15px;line-height:1.45;display:none}
+#hint.show{display:block;animation:pop .35s}
+@keyframes pop{from{transform:translateX(-50%) scale(.9);opacity:0}to{transform:translateX(-50%) scale(1);opacity:1}}
+#toast{top:64px;left:50%;transform:translateX(-50%);font-size:15px;display:none}
+.panel{position:fixed;z-index:20;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,6,12,.6)}
+.panel.show{display:flex}
+.card{background:linear-gradient(160deg,rgba(8,30,44,.97),rgba(4,14,22,.97));border:1px solid rgba(80,230,255,.5);border-radius:18px;padding:18px 20px;max-width:min(92vw,620px);text-align:center;box-shadow:0 0 30px rgba(0,200,255,.25)}
+.card h2{margin:4px 0 10px;font-size:22px;color:#7ff0ff}
+.card p{margin:6px 0 12px;font-size:15px;line-height:1.5;color:#cdeef5}
+.row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.item{pointer-events:auto;width:150px;background:rgba(10,40,56,.9);border:1px solid rgba(80,230,255,.4);border-radius:14px;padding:8px;cursor:pointer}
+.item img{width:100%;height:92px;object-fit:contain}
+.item b{display:block;font-size:15px;margin:4px 0 2px}
+.item span{font-size:14px;color:#8ff}
+.item.dis{opacity:.45}
+.big{pointer-events:auto;background:linear-gradient(180deg,#19c3e6,#0a7fa3);border:0;color:#fff;font-size:18px;font-weight:800;border-radius:14px;padding:12px 22px;margin:6px;cursor:pointer}
+.big.alt{background:rgba(20,60,80,.95);border:1px solid rgba(80,230,255,.5)}
+#introBox{position:fixed;inset:0;z-index:40;background:#000;display:none;align-items:center;justify-content:center}
+#introBox.show{display:flex}
+#introVid{width:100%;height:100%;object-fit:contain;background:#000}
+#skip{position:absolute;top:max(14px,env(safe-area-inset-top));inset-inline-end:16px}
+#sub{position:absolute;bottom:8%;left:0;right:0;text-align:center;font-size:clamp(16px,3vw,28px);font-weight:700;text-shadow:0 2px 6px #000;padding:0 10%}
+#place{position:fixed;z-index:6;bottom:max(14px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);display:none;gap:12px}
+#place.show{display:flex}
+#loading{position:fixed;inset:0;z-index:50;background:#000;display:flex;align-items:center;justify-content:center;font-size:18px;color:#7ff0ff}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<canvas id="mini" width="130" height="130"></canvas>
+
+<div id="res" class="hud"><div class="pill" id="crys">💎 0</div><div class="pill" id="crew">👨‍🚀 0</div></div>
+<div id="clock" class="hud pill">☀️</div>
+<div id="topR" class="hud"><div class="btn" id="bHelp">💡</div><div class="btn" id="bMenu">⚙️</div></div>
+<div id="acts" class="hud">
+  <div class="btn" id="bBuild">🏗️ <small data-t="build"></small></div>
+  <div class="btn" id="bAll">👥 <small data-t="all"></small></div>
+  <div class="btn" id="bNone" style="display:none">✖</div>
+</div>
+<div id="hint" class="hud pill"></div>
+<div id="toast" class="hud pill"></div>
+<div id="place"><div class="big" id="pOk">✔</div><div class="big alt" id="pNo">✖</div></div>
+
+<div class="panel" id="buildP"><div class="card">
+  <h2 data-t="build"></h2>
+  <div class="row">
+    <div class="item" id="itTower"><img src="assets/b_tower.png"><b data-t="tower"></b><span>💎 100</span></div>
+    <div class="item" id="itAstro"><img id="astroIcon" alt=""><b data-t="astro"></b><span>💎 80</span></div>
+  </div>
+  <div class="big alt" id="buildClose" data-t="close"></div>
+</div></div>
+
+<div class="panel" id="menuP"><div class="card">
+  <h2>Interplanetary Voyage</h2>
+  <div class="big" id="mResume" data-t="resume"></div>
+  <div class="big alt" id="mIntro" data-t="intro"></div>
+  <div class="big alt" id="mNew" data-t="newgame"></div>
+</div></div>
+
+<div class="panel" id="endP"><div class="card">
+  <h2 id="endT"></h2><p id="endM"></p>
+  <div class="row" id="endBtns"></div>
+</div></div>
+
+<div id="introBox"><video id="introVid" playsinline preload="auto"></video><div id="sub"></div><div class="btn" id="skip" data-t="skip"></div></div>
+<div id="loading">…</div>
+
+<script>
+"use strict";
+// ============================================================ language
+const AR = /^ar/i.test(navigator.language || "");
+document.documentElement.lang = AR ? "ar" : "en";
+document.documentElement.dir = AR ? "rtl" : "ltr";
+const TX = {
+  build: ["بناء", "Build"], all: ["الكل", "All"], tower: ["برج ليزر", "Laser Tower"], astro: ["رائد فضاء", "Astronaut"],
+  close: ["إغلاق", "Close"], resume: ["متابعة", "Resume"], intro: ["مشاهدة البداية", "Watch intro"], newgame: ["لعبة جديدة", "New game"],
+  skip: ["تخطي ⏭", "Skip ⏭"], day: ["اليوم", "Day"], night: ["الليل", "Night"],
+  t1: ["اضغط على رائد فضاء لتحديده 👨‍🚀", "Tap an astronaut to select it 👨‍🚀"],
+  t2: ["اضغط على الكريستال اللامع 💎 ليبدأ الجمع", "Tap a glowing crystal 💎 to start mining"],
+  t3: ["رائع! اجمع 100 كريستال لبناء أول برج ليزر", "Great! Collect 100 crystals to build your first laser tower"],
+  t4: ["اضغط 🏗️ بناء واختر برج ليزر، ثم اختر مكانه قرب القاعدة", "Tap 🏗️ Build, pick Laser Tower and place it near the base"],
+  t5: ["الليل قادم! الكائنات تهاجم ليلاً وأبراج الليزر تدافع تلقائياً", "Night is coming! Creatures attack at night; laser towers fire automatically"],
+  tdone: ["أنت الآن القائد. اصمد 5 ليالٍ لتأمين القاعدة", "You are in command now. Survive 5 nights to secure the base"],
+  help: ["حدد الرواد واضغط على الكريستال للجمع. ابنِ أبراج ليزر قبل الليل. درّب رواداً جدداً من قائمة البناء. لا يمكن المشي على الماء أو الجبال.",
+         "Select astronauts and tap crystals to mine. Build laser towers before night. Train more astronauts from the Build menu. Water and mountains block movement."],
+  noC: ["الكريستال لا يكفي", "Not enough crystals"], busy: ["طائرات البناء مشغولة بمبنى آخر", "Construction drones are busy"],
+  bad: ["لا يمكن البناء هنا", "Can't build here"], placeT: ["اضغط على الخريطة لاختيار المكان ثم ✔", "Tap the map to choose a spot, then ✔"],
+  maxA: ["وصلت للحد الأقصى من الرواد", "Crew limit reached"], newA: ["رائد فضاء جديد انضم للطاقم", "A new astronaut joined the crew"],
+  nightC: ["🌙 حلّ الليل... استعدوا!", "🌙 Night has fallen... get ready!"], dawn: ["☀️ طلع النهار. تم حفظ اللعبة", "☀️ Dawn. Game saved"],
+  down: ["رائد فضاء أصيب وسيعود للقاعدة", "An astronaut was hurt and will return to base"],
+  lostT: ["سقطت القاعدة", "The base has fallen"], lostM: ["الكائنات دمرت مركز القيادة. يمكنك المحاولة من آخر حفظ.", "The creatures destroyed the command center. Try again from your last save."],
+  retry: ["المحاولة من آخر حفظ", "Retry from last save"],
+  winT: ["تم تأمين القاعدة! 🚀", "Base secured! 🚀"],
+  winM: ["صمدت 5 ليالٍ على كوكب غريب. إذا أعجبتك اللعبة، قيّمها على جوجل بلاي، فهذا يساعدنا كثيراً ⭐", "You survived 5 nights on an alien world. If you enjoy the game, please rate it on Google Play, it really helps us ⭐"],
+  rate: ["⭐ قيّم اللعبة", "⭐ Rate the game"], cont: ["متابعة اللعب", "Keep playing"],
+  sure: ["بدء لعبة جديدة؟ سيضيع التقدم الحالي.", "Start a new game? Current progress will be lost."], yes: ["نعم", "Yes"], no: ["لا", "No"],
+  subs: [["الأرض تختنق... والموارد تنفد", "حتى اخترع العلماء محرك الالتواء", "ولأول مرة، أصبح السفر إلى النجوم ممكنًا", "الوجهة: كوكب بعيد... قد يكون موطننا الجديد", "لكن الرحلة لم تنتهِ كما خُطط لها..."],
+         ["Earth is suffocating... and its resources are running out", "Until scientists invented the warp drive", "For the first time, travel to the stars became possible", "The destination: a distant planet... perhaps our new home", "But the journey did not end as planned..."]]
+};
+const T = k => TX[k][AR ? 0 : 1];
+document.querySelectorAll("[data-t]").forEach(e => e.textContent = T(e.dataset.t));
+const PLAY_URL = "https://play.google.com/store/apps/details?id=com.interplanetary.voyage";
+
+// ============================================================ assets
+const A = {};
+const IMG = ["tex_ground", "tex_sand", "tex_grass", "tex_cliff", "tex_water", "b_command", "b_tower", "p_tree", "p_crystal", "p_rock",
+  "s_astro_front", "s_astro_back", "s_astro_side", "s_beast_front", "s_beast_side"];
+function loadAll() {
+  return Promise.all(IMG.map(n => new Promise(res => {
+    const i = new Image();
+    i.onload = () => { A[n] = i; res(); };
+    i.onerror = () => { console.warn("missing", n); res(); };
+    i.src = "assets/" + n + (n.startsWith("tex_") ? ".jpg" : ".png");
+  })));
+}
+const SHEET = { s_astro_front: 12, s_astro_back: 12, s_astro_side: 12, s_beast_front: 12, s_beast_side: 12 };
+
+// ============================================================ helpers
+const cv = document.getElementById("cv"), ctx = cv.getContext("2d");
+const mini = document.getElementById("mini"), mctx = mini.getContext("2d");
+const $ = id => document.getElementById(id);
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const lerp = (a, b, t) => a + (b - a) * t;
+const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+let toastT = 0;
+function toast(m) { const e = $("toast"); e.textContent = m; e.style.display = "block"; toastT = 2.6; }
+
+// ============================================================ audio (code-made effects)
+let AC = null;
+function ac() { if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { } } return AC; }
+function zap() {
+  const a = ac(); if (!a) return;
+  const o = a.createOscillator(), g = a.createGain();
+  o.type = "sawtooth"; o.frequency.setValueAtTime(1400, a.currentTime); o.frequency.exponentialRampToValueAtTime(220, a.currentTime + .18);
+  g.gain.setValueAtTime(.06, a.currentTime); g.gain.exponentialRampToValueAtTime(.001, a.currentTime + .2);
+  o.connect(g).connect(a.destination); o.start(); o.stop(a.currentTime + .22);
+}
+function chime(f) {
+  const a = ac(); if (!a) return;
+  const o = a.createOscillator(), g = a.createGain();
+  o.type = "sine"; o.frequency.value = f || 660;
+  g.gain.setValueAtTime(.08, a.currentTime); g.gain.exponentialRampToValueAtTime(.001, a.currentTime + .35);
+  o.connect(g).connect(a.destination); o.start(); o.stop(a.currentTime + .4);
+}
+
+// ============================================================ world generation
+const CELL = 32, N = 160, WORLD = CELL * N;
+let H, TH, walk, occ, reach, seed;
+function genWorld(sd) {
+  seed = sd;
+  const r = rng(sd);
+  // value-noise lattices
+  const lat = [];
+  const oct = [[20, 1], [10, .5], [5, .25], [2.5, .12]];
+  for (const [s] of oct) { const n = Math.ceil(N / s) + 2, g = new Float32Array(n * n); for (let i = 0; i < g.length; i++) g[i] = r(); lat.push([s, n, g]); }
+  function vn(x, y) {
+    let v = 0, w = 0;
+    oct.forEach(([s, amp], k) => {
+      const [, n, g] = lat[k];
+      const fx = x / s, fy = y / s, ix = Math.floor(fx), iy = Math.floor(fy), tx = fx - ix, ty = fy - iy;
+      const sx = tx * tx * (3 - 2 * tx), sy = ty * ty * (3 - 2 * ty);
+      const a = g[iy * n + ix], b = g[iy * n + ix + 1], c = g[(iy + 1) * n + ix], d = g[(iy + 1) * n + ix + 1];
+      v += amp * lerp(lerp(a, b, sx), lerp(c, d, sx), sy); w += amp;
+    });
+    return v / w;
+  }
+  H = new Float32Array(N * N);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) H[y * N + x] = vn(x, y);
+  // thresholds from percentiles
+  const s = Array.from(H).sort((a, b) => a - b), P = p => s[Math.floor(p * (s.length - 1))];
+  TH = { water: P(.17), sand: P(.23), grass: P(.52), cliff: P(.86) };
+  // flatten the landing zone in the middle
+  const mid = (TH.sand + TH.grass) / 2 + (TH.grass - TH.sand) * .25, c = N / 2;
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const d = Math.hypot(x - c, y - c), k = 1 - smooth(9, 17, d);
+    H[y * N + x] = lerp(H[y * N + x], mid, k);
+  }
+  // map edge becomes sea
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const e = Math.min(x, y, N - 1 - x, N - 1 - y), k = 1 - smooth(0, 7, e);
+    H[y * N + x] = lerp(H[y * N + x], TH.water - .08, k);
+  }
+  walk = new Uint8Array(N * N); occ = new Uint8Array(N * N);
+  for (let i = 0; i < N * N; i++) walk[i] = H[i] > TH.water + .006 && H[i] < TH.cliff - .004 ? 1 : 0;
+  // reachable area from the landing zone
+  reach = new Uint8Array(N * N);
+  const q = [c * N + c]; reach[q[0]] = 1;
+  while (q.length) { const i = q.pop(), x = i % N, y = (i / N) | 0; for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= N || ny >= N) continue; const j = ny * N + nx; if (!reach[j] && walk[j]) { reach[j] = 1; q.push(j); } } }
+  chunks.clear(); buildMinimapBase();
+}
+function hAt(wx, wy) { // bilinear height at world px
+  const fx = clamp(wx / CELL - .5, 0, N - 1.001), fy = clamp(wy / CELL - .5, 0, N - 1.001), ix = fx | 0, iy = fy | 0, tx = fx - ix, ty = fy - iy;
+  const a = H[iy * N + ix], b = H[iy * N + ix + 1], c = H[(iy + 1) * N + ix], d = H[(iy + 1) * N + ix + 1];
+  return lerp(lerp(a, b, tx), lerp(c, d, tx), ty);
+}
+const cellOf = (x, y) => [clamp(Math.floor(x / CELL), 0, N - 1), clamp(Math.floor(y / CELL), 0, N - 1)];
+const free = (cx, cy) => cx >= 0 && cy >= 0 && cx < N && cy < N && walk[cy * N + cx] && !occ[cy * N + cx];
+function markOcc(x, y, r, v) { const [a, b] = cellOf(x - r, y - r), [c, d] = cellOf(x + r, y + r); for (let j = b; j <= d; j++) for (let i = a; i <= c; i++) if (Math.hypot((i + .5) * CELL - x, (j + .5) * CELL - y) < r) occ[j * N + i] = v; }
+
+// ============================================================ terrain chunks
+const CH = 512, chunks = new Map();
+let pats = null;
+function makePats() {
+  pats = {};
+  for (const k of ["ground", "sand", "grass", "cliff", "water"]) pats[k] = ctx.createPattern(A["tex_" + k], "repeat");
+}
+function renderChunk(cx, cy) {
+  const c = document.createElement("canvas"); c.width = c.height = CH; const g = c.getContext("2d");
+  const S = 8, M = CH / S, ox = cx * CH, oy = cy * CH;
+  const hs = new Float32Array((M + 2) * (M + 2));
+  for (let j = -1; j <= M; j++) for (let i = -1; i <= M; i++) hs[(j + 1) * (M + 2) + i + 1] = hAt(ox + (i + .5) * S, oy + (j + .5) * S);
+  const layers = [["sand", TH.water, .012], ["grass", TH.sand, .02], ["ground", TH.grass, .025], ["cliff", TH.cliff - .01, .018]];
+  const tmp = document.createElement("canvas"); tmp.width = tmp.height = CH; const tg = tmp.getContext("2d");
+  const mk = document.createElement("canvas"); mk.width = mk.height = M; const mg = mk.getContext("2d");
+  for (const [tex, th, w] of layers) {
+    const id = mg.createImageData(M, M);
+    let any = false;
+    for (let j = 0; j < M; j++) for (let i = 0; i < M; i++) { const a = smooth(th - w, th + w, hs[(j + 1) * (M + 2) + i + 1]); id.data[(j * M + i) * 4 + 3] = a * 255; if (a > 0) any = true; }
+    if (!any) continue;
+    mg.putImageData(id, 0, 0);
+    tg.globalCompositeOperation = "source-over"; tg.clearRect(0, 0, CH, CH);
+    tg.save(); tg.translate(-ox % 512, -oy % 512); tg.fillStyle = pats[tex]; tg.fillRect(0, 0, CH + 512, CH + 512); tg.restore();
+    tg.globalCompositeOperation = "destination-in"; tg.imageSmoothingEnabled = true; tg.drawImage(mk, 0, 0, CH, CH);
+    g.drawImage(tmp, 0, 0);
+  }
+  // hill shading + cliff rims
+  const sh = mg.createImageData(M, M);
+  for (let j = 0; j < M; j++) for (let i = 0; i < M; i++) {
+    const at = (a, b) => hs[(j + 1 + b) * (M + 2) + i + 1 + a];
+    const h0 = at(0, 0), gx = at(1, 0) - at(-1, 0), gy = at(0, 1) - at(0, -1);
+    const land = smooth(TH.water - .01, TH.water + .02, h0);
+    let l = (-gx - gy) * 26; // light from top-left
+    l += (h0 - TH.grass) * 1.2;
+    const rim = smooth(TH.cliff - .03, TH.cliff, h0) * (1 - smooth(TH.cliff, TH.cliff + .03, h0));
+    const p = (j * M + i) * 4;
+    if (l < 0) { sh.data[p] = sh.data[p + 1] = 0; sh.data[p + 2] = 8; sh.data[p + 3] = clamp(-l * 255, 0, 150) * land; }
+    else { sh.data[p] = 200; sh.data[p + 1] = 245; sh.data[p + 2] = 255; sh.data[p + 3] = clamp(l * 120, 0, 60) * land; }
+    if (rim > 0) { sh.data[p] = sh.data[p + 1] = sh.data[p + 2] = 0; sh.data[p + 3] = Math.max(sh.data[p + 3], rim * 140); }
+  }
+  mg.putImageData(sh, 0, 0);
+  g.imageSmoothingEnabled = true; g.drawImage(mk, 0, 0, CH, CH);
+  // wet dark rim on the shore
+  const sr = mg.createImageData(M, M);
+  for (let j = 0; j < M; j++) for (let i = 0; i < M; i++) { const h0 = hs[(j + 1) * (M + 2) + i + 1], k = smooth(TH.water, TH.water + .012, h0) * (1 - smooth(TH.water + .012, TH.water + .03, h0)); const p = (j * M + i) * 4; sr.data[p] = 0; sr.data[p + 1] = 20; sr.data[p + 2] = 25; sr.data[p + 3] = k * 120; }
+  mg.putImageData(sr, 0, 0); g.drawImage(mk, 0, 0, CH, CH);
+  return c;
+}
+function getChunk(cx, cy) {
+  const k = cx + "," + cy; let c = chunks.get(k);
+  if (!c) { c = renderChunk(cx, cy); chunks.set(k, c); if (chunks.size > 40) chunks.delete(chunks.keys().next().value); }
+  else { chunks.delete(k); chunks.set(k, c); }
+  return c;
+}
+
+// ============================================================ minimap
+let miniBase;
+function buildMinimapBase() {
+  miniBase = document.createElement("canvas"); miniBase.width = miniBase.height = N;
+  const g = miniBase.getContext("2d"), id = g.createImageData(N, N);
+  for (let i = 0; i < N * N; i++) {
+    const h = H[i]; let c;
+    if (h < TH.water) c = [8, 50, 55]; else if (h < TH.sand) c = [90, 92, 95]; else if (h < TH.grass) c = [20, 90, 90]; else if (h < TH.cliff) c = [55, 58, 62]; else c = [25, 27, 30];
+    id.data.set([c[0], c[1], c[2], 255], i * 4);
+  }
+  g.putImageData(id, 0, 0);
+}
+
+// ============================================================ path finding (A* on cells)
+function findPath(sx, sy, tx, ty, ignoreOcc) {
+  let [ax, ay] = cellOf(sx, sy), [bx, by] = cellOf(tx, ty);
+  const ok = (x, y) => x >= 0 && y >= 0 && x < N && y < N && walk[y * N + x] && (ignoreOcc || !occ[y * N + x]);
+  if (!ok(bx, by)) { // nearest open cell to target
+    let best = null, bd = 1e9;
+    for (let r = 1; r < 8 && !best; r++) for (let j = -r; j <= r; j++) for (let i = -r; i <= r; i++) { if (ok(bx + i, by + j)) { const d = i * i + j * j; if (d < bd) { bd = d; best = [bx + i, by + j]; } } }
+    if (!best) return null; [bx, by] = best;
+  }
+  const start = ay * N + ax, goal = by * N + bx;
+  const gS = new Float32Array(N * N).fill(1e9), from = new Int32Array(N * N).fill(-1), closed = new Uint8Array(N * N);
+  const heap = []; const push = (i, f) => { heap.push([f, i]); let k = heap.length - 1; while (k > 0) { const p = (k - 1) >> 1; if (heap[p][0] <= heap[k][0]) break;[heap[p], heap[k]] = [heap[k], heap[p]]; k = p; } };
+  const pop = () => { const top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; let k = 0; for (; ;) { const l = 2 * k + 1, r = l + 1; let m = k; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === k) break;[heap[m], heap[k]] = [heap[k], heap[m]]; k = m; } } return top[1]; };
+  const hh = i => { const x = i % N, y = (i / N) | 0, dx = Math.abs(x - bx), dy = Math.abs(y - by); return Math.max(dx, dy) + .414 * Math.min(dx, dy); };
+  gS[start] = 0; push(start, hh(start));
+  let n = 0;
+  while (heap.length && n++ < 12000) {
+    const i = pop(); if (i === goal) break; if (closed[i]) continue; closed[i] = 1;
+    const x = i % N, y = (i / N) | 0;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      if (!dx && !dy) continue; const nx = x + dx, ny = y + dy;
+      if (!ok(nx, ny) && ny * N + nx !== start) continue;
+      if (dx && dy && (!ok(x + dx, y) || !ok(x, y + dy))) continue;
+      const j = ny * N + nx, c = gS[i] + (dx && dy ? 1.414 : 1);
+      if (c < gS[j]) { gS[j] = c; from[j] = i; push(j, c + hh(j)); }
+    }
+  }
+  if (from[goal] < 0 && goal !== start) return null;
+  const cells = []; for (let i = goal; i !== start && i >= 0; i = from[i]) cells.push(i); cells.reverse();
+  const pts = cells.map(i => ({ x: (i % N + .5) * CELL, y: (((i / N) | 0) + .5) * CELL }));
+  if (pts.length) { const last = pts[pts.length - 1]; if (Math.hypot(last.x - tx, last.y - ty) < CELL) { last.x = tx; last.y = ty; } }
+  // string pulling
+  const out = []; let from0 = { x: sx, y: sy }, k = 0;
+  while (k < pts.length) { let far = k; for (let m = pts.length - 1; m > k; m--) if (los(from0, pts[m], ok)) { far = m; break; } out.push(pts[far]); from0 = pts[far]; k = far + 1; }
+  return out;
+}
+function los(a, b, ok) { const d = Math.hypot(b.x - a.x, b.y - a.y), n = Math.ceil(d / (CELL / 3)); for (let i = 1; i < n; i++) { const t = i / n, [x, y] = cellOf(lerp(a.x, b.x, t), lerp(a.y, b.y, t)); if (!ok(x, y)) return false; } return true; }
+
+// ============================================================ game state
+const G = { t: 0, day: 1, phase: "day", phaseT: 0, crystals: 60, paused: true, over: false, won: false, tut: 0, building: null, maxCrew: 8 };
+let buildings = [], astros = [], beasts = [], deposits = [], props = [], fx = [], lasers = [];
+const DAY_LEN = 150, NIGHT_LEN = 75, WIN_NIGHTS = 5;
+const BT = { command: { img: "b_command", w: 370, hp: 1500, r: 135 }, tower: { img: "b_tower", w: 150, hp: 500, r: 46, range: 310, dps: 26 } };
+
+function addBuilding(type, x, y, built) {
+  const d = BT[type], im = A[d.img];
+  const b = { kind: "b", type, x, y, w: d.w, h: d.w * im.height / im.width, hp: d.hp, max: d.hp, r: d.r, built: !!built, prog: built ? 1 : 0, fade: built ? 1 : 0, aim: null, zapT: 0 };
+  buildings.push(b); markOcc(x, y - b.h * .18, d.r, 1); return b;
+}
+function addAstro(x, y) { const a = { kind: "a", x, y, hp: 60, max: 60, path: null, job: null, carry: 0, mineT: 0, dir: "front", flip: false, anim: Math.random() * 12, moving: false, sel: false, downT: 0 }; astros.push(a); return a; }
+function cmd() { return buildings.find(b => b.type === "command"); }
+
+function newGame(sd) {
+  genWorld(sd);
+  buildings = []; astros = []; beasts = []; deposits = []; props = []; fx = []; lasers = [];
+  const c = WORLD / 2;
+  addBuilding("command", c, c + 60, true);
+  for (let i = 0; i < 3; i++) addAstro(c - 60 + i * 60, c + 140);
+  scatter(rng(sd ^ 0x5151));
+  Object.assign(G, { t: 0, day: 1, phase: "day", phaseT: 0, crystals: 60, over: false, won: false, building: null });
+  G.tut = localStorage.getItem("iv_tut") ? 99 : 1;
+  cam.x = c; cam.y = c + 40; cam.z = 1;
+  save();
+}
+function scatter(r) {
+  const c = WORLD / 2;
+  const tryPlace = (fn, n, minD, maxD) => { let k = 0, guard = 0; while (k < n && guard++ < n * 60) { const a = r() * 6.283, d = lerp(minD, maxD, r()), x = c + Math.cos(a) * d, y = c + Math.sin(a) * d; if (fn(x, y)) k++; } };
+  // crystals: a few near the base, more further out
+  const dep = (x, y) => { const [i, j] = cellOf(x, y); if (!reach[j * N + i] || occ[j * N + i]) return false; for (const d of deposits) if (Math.hypot(d.x - x, d.y - y) < 260) return false; deposits.push({ kind: "d", x, y, amt: 250, max: 250 }); markOcc(x, y, 30, 1); return true; };
+  tryPlace(dep, 4, 330, 650); tryPlace(dep, 14, 650, 2300);
+  const prop = (type, test) => (x, y) => { const [i, j] = cellOf(x, y); if (!walk[j * N + i] || occ[j * N + i] || !test(H[j * N + i])) return false; if (Math.hypot(x - c, y - c) < 430) return false; props.push({ kind: "p", type, x, y, s: lerp(.8, 1.2, r()), flip: r() < .5 }); markOcc(x, y, type === "tree" ? 22 : 26, 1); return true; };
+  tryPlace(prop("tree", h => h > TH.sand && h < TH.grass), 90, 420, 2500);
+  tryPlace(prop("rock", h => h > TH.grass), 45, 420, 2500);
+}
+
+// ============================================================ save / load
+function save() {
+  const s = {
+    v: 1, seed, day: G.day, crystals: G.crystals, tut: G.tut,
+    b: buildings.filter(b => b.built).map(b => [b.type, b.x | 0, b.y | 0, b.hp | 0]),
+    a: astros.length, d: deposits.map(d => [d.x | 0, d.y | 0, d.amt | 0]), p: props.map(p => [p.type, p.x | 0, p.y | 0, +p.s.toFixed(2), p.flip ? 1 : 0])
+  };
+  try { localStorage.setItem("iv_save", JSON.stringify(s)); } catch (e) { }
+}
+function load() {
+  let s; try { s = JSON.parse(localStorage.getItem("iv_save") || "null"); } catch (e) { }
+  if (!s || s.v !== 1) return false;
+  genWorld(s.seed);
+  buildings = []; astros = []; beasts = []; fx = []; lasers = [];
+  for (const [t, x, y, hp] of s.b) { const b = addBuilding(t, x, y, true); b.hp = hp; }
+  deposits = s.d.map(([x, y, amt]) => { markOcc(x, y, 30, 1); return { kind: "d", x, y, amt, max: 250 }; });
+  props = s.p.map(([type, x, y, sc, f]) => { markOcc(x, y, type === "tree" ? 22 : 26, 1); return { kind: "p", type, x, y, s: sc, flip: !!f }; });
+  const c = cmd() || { x: WORLD / 2, y: WORLD / 2 };
+  for (let i = 0; i < s.a; i++) addAstro(c.x - 80 + (i % 4) * 50, c.y + 90 + Math.floor(i / 4) * 40);
+  Object.assign(G, { day: s.day, crystals: s.crystals, phase: "day", phaseT: 0, over: false, won: false, tut: s.tut, building: null });
+  cam.x = c.x; cam.y = c.y; return true;
+}
+
+// ============================================================ camera & input
+const cam = { x: WORLD / 2, y: WORLD / 2, z: 1 };
+let W = 0, Hh = 0, DPR = 1;
+function resize() { DPR = Math.min(window.devicePixelRatio || 1, 1.6); W = innerWidth; Hh = innerHeight; cv.width = W * DPR; cv.height = Hh * DPR; }
+addEventListener("resize", resize);
+const toWorld = (sx, sy) => ({ x: (sx - W / 2) / cam.z + cam.x, y: (sy - Hh / 2) / cam.z + cam.y });
+function clampCam() { const hw = W / 2 / cam.z, hh = Hh / 2 / cam.z; cam.x = clamp(cam.x, hw, WORLD - hw); cam.y = clamp(cam.y, hh, WORLD - hh); }
+const ptrs = new Map(); let drag = null, pinch = null, ghost = null;
+cv.addEventListener("pointerdown", e => { ac(); cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (ptrs.size === 1) drag = { x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y, moved: false }; else if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), z: cam.z }; drag = null; } });
+cv.addEventListener("pointermove", e => {
+  if (!ptrs.has(e.pointerId)) return; ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pinch && ptrs.size >= 2) { const [a, b] = [...ptrs.values()]; cam.z = clamp(pinch.z * Math.hypot(a.x - b.x, a.y - b.y) / pinch.d, .45, 1.6); clampCam(); }
+  else if (drag) { const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.hypot(dx, dy) > 10) drag.moved = true; if (drag.moved) { cam.x = drag.cx - dx / cam.z; cam.y = drag.cy - dy / cam.z; clampCam(); } }
+});
+const up = e => { if (drag && !drag.moved && ptrs.size === 1) tap(e.clientX, e.clientY); ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null; if (!ptrs.size) drag = null; };
+cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", e => { ptrs.delete(e.pointerId); drag = null; pinch = null; });
+cv.addEventListener("wheel", e => { cam.z = clamp(cam.z * (e.deltaY < 0 ? 1.1 : .9), .45, 1.6); clampCam(); }, { passive: true });
+mini.addEventListener("pointerdown", e => { const r = mini.getBoundingClientRect(); cam.x = (e.clientX - r.left) / r.width * WORLD; cam.y = (e.clientY - r.top) / r.height * WORLD; clampCam(); });
+
+function selected() { return astros.filter(a => a.sel && !a.downT); }
+function updSelBtn() { $("bNone").style.display = selected().length ? "flex" : "none"; }
+function tap(sx, sy) {
+  if (G.paused || G.over) return;
+  const p = toWorld(sx, sy);
+  if (ghost) { ghost.x = p.x; ghost.y = p.y; return; }
+  // astronaut hit test (sprite box)
+  let hit = null, hd = 1e9;
+  for (const a of astros) { if (a.downT) continue; const d = Math.hypot(p.x - a.x, p.y - (a.y - 28)); if (d < 42 / Math.min(cam.z, 1) && d < hd) { hd = d; hit = a; } }
+  if (hit) { hit.sel = !hit.sel; chime(hit.sel ? 880 : 520); updSelBtn(); if (G.tut === 1 && hit.sel) setTut(2); return; }
+  const sel = selected(); if (!sel.length) return;
+  const dep = deposits.find(d => d.amt > 0 && Math.hypot(p.x - d.x, p.y - (d.y - 20)) < 70);
+  if (dep) { sel.forEach(a => { a.job = { dep }; goTo(a, dep.x, dep.y + 26); }); fx.push({ t: "ring", x: dep.x, y: dep.y, c: "#5ff", life: .6 }); if (G.tut === 2) setTut(3); return; }
+  sel.forEach((a, i) => { a.job = null; const o = i - (sel.length - 1) / 2; goTo(a, p.x + o * 30, p.y + (i % 2) * 20); });
+  fx.push({ t: "ring", x: p.x, y: p.y, c: "#7ff", life: .5 });
+}
+function goTo(u, x, y) { u.path = findPath(u.x, u.y, x, y, false) || null; }
+
+// ============================================================ HUD wiring
+$("bAll").onclick = () => { const s = astros.filter(a => !a.downT); const allOn = s.every(a => a.sel); s.forEach(a => a.sel = !allOn); updSelBtn(); if (G.tut === 1 && !allOn) setTut(2); };
+$("bNone").onclick = () => { astros.forEach(a => a.sel = false); updSelBtn(); };
+$("bBuild").onclick = () => { if (!G.paused) { G.paused = true; $("buildP").classList.add("show"); refreshBuild(); } };
+$("buildClose").onclick = () => { $("buildP").classList.remove("show"); G.paused = false; };
+function refreshBuild() { $("itTower").classList.toggle("dis", G.crystals < 100); $("itAstro").classList.toggle("dis", G.crystals < 80 || astros.length >= G.maxCrew); }
+$("itTower").onclick = () => {
+  if (G.crystals < 100) return toast(T("noC"));
+  if (buildings.some(b => !b.built)) return toast(T("busy"));
+  $("buildP").classList.remove("show"); G.paused = false;
+  const c = cmd(); ghost = { x: c.x + 260, y: c.y + 40 }; $("place").classList.add("show"); toast(T("placeT"));
+};
+$("itAstro").onclick = () => {
+  if (astros.length >= G.maxCrew) return toast(T("maxA"));
+  if (G.crystals < 80) return toast(T("noC"));
+  G.crystals -= 80; const c = cmd(); const a = addAstro(c.x, c.y + 80); goTo(a, c.x + (Math.random() - .5) * 160, c.y + 140); toast(T("newA")); chime(990); refreshBuild();
+};
+function ghostOk() { if (!ghost) return false; const [i, j] = cellOf(ghost.x, ghost.y - 25); for (let y = -1; y <= 1; y++) for (let x = -1; x <= 1; x++) { if (!free(i + x, j + y) || !reach[(j + y) * N + i + x]) return false; } return true; }
+$("pOk").onclick = () => {
+  if (!ghostOk()) return toast(T("bad"));
+  G.crystals -= 100; const b = addBuilding("tower", ghost.x, ghost.y, false); startConstruction(b);
+  ghost = null; $("place").classList.remove("show");
+};
+$("pNo").onclick = () => { ghost = null; $("place").classList.remove("show"); };
+$("bHelp").onclick = () => { showHint(G.tut >= 1 && G.tut <= 5 ? T("t" + G.tut) : T("help"), 7); };
+$("bMenu").onclick = () => { G.paused = true; $("menuP").classList.add("show"); };
+$("mResume").onclick = () => { $("menuP").classList.remove("show"); G.paused = false; };
+$("mIntro").onclick = () => { $("menuP").classList.remove("show"); playIntro(() => { G.paused = false; }); };
+$("mNew").onclick = () => {
+  endPanel(T("newgame"), T("sure"), [[T("yes"), () => { localStorage.removeItem("iv_save"); localStorage.removeItem("iv_tut"); newGame((Math.random() * 1e9) | 0); $("menuP").classList.remove("show"); G.paused = false; }], [T("no"), () => { }]]);
+};
+function endPanel(title, msg, btns) {
+  $("endT").textContent = title; $("endM").textContent = msg; const r = $("endBtns"); r.innerHTML = "";
+  btns.forEach(([label, fn], i) => { const b = document.createElement("div"); b.className = "big" + (i ? " alt" : ""); b.textContent = label; b.onclick = () => { $("endP").classList.remove("show"); fn(); }; r.appendChild(b); });
+  $("endP").classList.add("show");
+}
+let hintT = 0;
+function showHint(m, secs) { const h = $("hint"); h.textContent = m; h.classList.remove("show"); void h.offsetWidth; h.classList.add("show"); hintT = secs || 1e9; }
+function setTut(n) {
+  G.tut = n;
+  if (n >= 1 && n <= 5) showHint(T("t" + n)); else if (n === 6) { showHint(T("tdone"), 8); G.tut = 99; localStorage.setItem("iv_tut", "1"); }
+  chime(760);
+}
+
+// ============================================================ construction with video
+const bv = document.createElement("video"); bv.src = "assets/v_build_tower.mp4"; bv.playsInline = true; bv.preload = "auto";
+const bvc = document.createElement("canvas"); bvc.width = 360; bvc.height = 202; const bvg = bvc.getContext("2d");
+let bvOk = false;
+function startConstruction(b) {
+  b.prog = 0; b.vid = true; bvOk = false;
+  try { bv.currentTime = 0; bv.muted = false; bv.play().then(() => bvOk = true).catch(() => { bv.muted = true; bv.play().then(() => bvOk = true).catch(() => { b.vid = false; }); }); } catch (e) { b.vid = false; }
+}
+function drawBuildVideo(b) {
+  if (!bvOk || bv.readyState < 2) return false;
+  bvg.globalCompositeOperation = "source-over"; bvg.drawImage(bv, 0, 0, bvc.width, bvc.height);
+  bvg.globalCompositeOperation = "destination-in";
+  const gr = bvg.createRadialGradient(bvc.width * .5, bvc.height * .52, bvc.height * .22, bvc.width * .5, bvc.height * .52, bvc.height * .5);
+  gr.addColorStop(0, "rgba(0,0,0,1)"); gr.addColorStop(1, "rgba(0,0,0,0)"); bvg.fillStyle = gr; bvg.fillRect(0, 0, bvc.width, bvc.height);
+  const vw = b.w * 1.7, vh = vw * bvc.height / bvc.width;
+  ctx.globalAlpha = 1 - b.fade; ctx.drawImage(bvc, b.x - vw / 2, b.y - b.h * .52 - vh * .52, vw, vh); ctx.globalAlpha = 1;
+  return true;
+}
+
+// ============================================================ update
+function update(dt) {
+  G.t += dt; G.phaseT += dt;
+  // day / night cycle (first day waits for the tutorial)
+  const dayLen = G.day === 1 && G.tut <= 4 ? 1e9 : DAY_LEN;
+  if (G.phase === "day" && G.phaseT >= dayLen) { G.phase = "night"; G.phaseT = 0; spawnWave(); toast(T("nightC")); chime(330); if (G.tut === 5) setTimeout(() => setTut(6), 9000); }
+  else if (G.phase === "night" && G.phaseT >= NIGHT_LEN) {
+    G.phase = "day"; G.phaseT = 0; beasts.forEach(b => b.flee = true);
+    if (G.day >= WIN_NIGHTS && !G.won) { G.won = true; G.day++; save(); victory(); return; }
+    G.day++; save(); toast(T("dawn")); chime(880);
+  }
+  if (G.tut === 1 && astros.some(a => a.sel)) setTut(2);
+  if (G.tut === 2 && astros.some(a => a.job)) setTut(3);
+  if (G.tut === 3 && G.crystals >= 100) setTut(4);
+  // spawn queue
+  if (G.spawnQ && G.spawnQ.length) { G.spawnT -= dt; if (G.spawnT <= 0) { const p = G.spawnQ.shift(); beasts.push({ kind: "e", x: p.x, y: p.y, hp: 110 + G.day * 18, max: 110 + G.day * 18, path: null, repath: 0, tgt: null, cd: 0, dir: "side", flip: false, anim: 0, flee: false, alpha: 0 }); G.spawnT = 2.2; } }
+  // construction
+  for (const b of buildings) if (!b.built) {
+    const dur = bvOk && bv.duration ? bv.duration : 8;
+    b.prog = clamp(bvOk ? bv.currentTime / dur : b.prog + dt / 8, 0, 1);
+    if (b.prog >= .97 || (bvOk && bv.ended)) { b.built = true; chime(1200); if (G.tut === 4) setTut(5); if (G.tut === 5 && G.day === 1) G.phaseT = DAY_LEN - 20; }
+  } else if (b.fade < 1) b.fade = Math.min(1, b.fade + dt / .45);
+  // astronauts
+  const c = cmd();
+  for (const a of astros) {
+    if (a.downT) { a.downT -= dt; if (a.downT <= 0 && c) { a.downT = 0; a.hp = a.max; a.x = c.x; a.y = c.y + 90; a.path = null; } continue; }
+    let moving = followPath(a, 78, dt);
+    const j = a.job;
+    if (j && !a.path) {
+      if (j.back) { // deliver
+        if (c && Math.hypot(a.x - c.x, a.y - (c.y + 30)) < 190) { G.crystals += a.carry; a.carry = 0; j.back = false; fx.push({ t: "txt", x: a.x, y: a.y - 70, s: "+10 💎", life: 1.2 }); if (j.dep.amt > 0) goTo(a, j.dep.x, j.dep.y + 26); else a.job = null; }
+        else if (c) goTo(a, c.x, c.y + 120);
+      } else if (j.dep.amt <= 0) a.job = null;
+      else if (Math.hypot(a.x - j.dep.x, a.y - j.dep.y) < 80) { a.mineT += dt; if (a.mineT > 2.4) { a.mineT = 0; const take = Math.min(10, j.dep.amt); j.dep.amt -= take; a.carry = take; j.back = true; if (c) goTo(a, c.x + (Math.random() - .5) * 120, c.y + 120); } }
+      else goTo(a, j.dep.x, j.dep.y + 26);
+    }
+    a.moving = moving; if (moving) a.anim += dt * 13;
+  }
+  // beasts
+  for (const e of beasts) {
+    if (e.flee) { e.alpha -= dt / 1.5; continue; }
+    e.alpha = Math.min(1, e.alpha + dt);
+    e.cd -= dt; e.repath -= dt;
+    if (!e.tgt || e.tgt.hp <= 0 || e.tgt.downT || e.repath <= 0) {
+      let best = c, bd = c ? dist(e, c) : 1e9;
+      for (const b of buildings) { const d = dist(e, b) - 80; if (d < bd) { bd = d; best = b; } }
+      for (const a of astros) { if (a.downT) continue; const d = dist(e, a); if (d < 320 && d < bd) { bd = d; best = a; } }
+      if (best !== e.tgt || e.repath <= 0) { e.tgt = best; if (best) e.path = findPath(e.x, e.y, best.x, best.y, true); e.repath = 2.5; }
+    }
+    const t = e.tgt; if (!t) continue;
+    const reachD = (t.kind === "b" ? t.r + 30 : 34);
+    const dd = Math.hypot(e.x - t.x, e.y - (t.kind === "b" ? t.y - t.h * .18 : t.y));
+    if (dd < reachD + 18) { e.path = null; e.moving = false; if (e.cd <= 0) { e.cd = 1.1; hurt(t, 14 + G.day * 2); fx.push({ t: "hit", x: t.x + (Math.random() - .5) * 30, y: (t.kind === "b" ? t.y - t.h * .3 : t.y - 30), life: .35 }); } e.flip = t.x < e.x; }
+    else { e.moving = followPath(e, 58, dt); if (e.moving) e.anim += dt * 11; }
+  }
+  beasts = beasts.filter(e => e.hp > 0 && e.alpha > -0.01);
+  // towers
+  lasers = [];
+  for (const b of buildings) {
+    if (b.type !== "tower" || !b.built) continue;
+    const d = BT.tower; let tg = b.aim;
+    if (!tg || tg.hp <= 0 || tg.flee || dist(tg, b) > d.range) { tg = null; let bd = d.range; for (const e of beasts) { if (e.flee) continue; const k = dist(e, b); if (k < bd) { bd = k; tg = e; } } if (tg && tg !== b.aim) zap(); b.aim = tg; }
+    if (tg) { tg.hp -= d.dps * dt; lasers.push([b.x - b.w * .22, b.y - b.h * .78, tg.x, tg.y - 30]); if (tg.hp <= 0) { fx.push({ t: "boom", x: tg.x, y: tg.y - 30, life: .6 }); G.crystals += 5; fx.push({ t: "txt", x: tg.x, y: tg.y - 60, s: "+5 💎", life: 1 }); } }
+  }
+  // buildings destroyed
+  for (const b of buildings) if (b.hp <= 0 && !b.dead) { b.dead = true; markOcc(b.x, b.y - b.h * .18, b.r, 0); fx.push({ t: "boom", x: b.x, y: b.y - b.h * .4, life: 1, big: true }); if (b.type === "command") lose(); }
+  buildings = buildings.filter(b => !b.dead);
+  fx = fx.filter(f => (f.life -= dt) > 0);
+  if (toastT > 0 && (toastT -= dt) <= 0) $("toast").style.display = "none";
+  if (hintT < 1e8 && (hintT -= dt) <= 0) $("hint").classList.remove("show");
+}
+function hurt(t, dmg) { t.hp -= dmg; if (t.kind === "a" && t.hp <= 0) { t.downT = 15; t.sel = false; t.job = null; t.carry = 0; t.path = null; toast(T("down")); updSelBtn(); } }
+function followPath(u, speed, dt) {
+  if (!u.path || !u.path.length) { u.path = null; return false; }
+  const p = u.path[0], dx = p.x - u.x, dy = p.y - u.y, d = Math.hypot(dx, dy), s = speed * dt;
+  if (d <= s) { u.x = p.x; u.y = p.y; u.path.shift(); if (!u.path.length) u.path = null; }
+  else { u.x += dx / d * s; u.y += dy / d * s; }
+  if (Math.abs(dx) > Math.abs(dy) * 1.2) { u.dir = "side"; u.flip = dx < 0; } else u.dir = dy > 0 ? "front" : (u.kind === "e" ? "side" : "back");
+  if (u.kind === "e" && u.dir === "side") u.flip = dx < 0;
+  return true;
+}
+function spawnWave() {
+  const c = cmd(); if (!c) return; const r = rng((seed ^ G.day * 7919) >>> 0); const n = 3 + G.day * 2; G.spawnQ = []; G.spawnT = 1;
+  let guard = 0;
+  while (G.spawnQ.length < n && guard++ < 3000) { const a = r() * 6.283, d = lerp(1000, 1500, r()), x = c.x + Math.cos(a) * d, y = c.y + Math.sin(a) * d; const [i, j] = cellOf(x, y); if (x > 64 && y > 64 && x < WORLD - 64 && y < WORLD - 64 && reach[j * N + i]) G.spawnQ.push({ x, y }); }
+}
+function lose() { if (G.over) return; G.over = true; setTimeout(() => endPanel(T("lostT"), T("lostM"), [[T("retry"), () => { load(); G.over = false; }]]), 1200); }
+function victory() {
+  G.paused = true;
+  endPanel(T("winT"), T("winM"), [[T("rate"), () => { localStorage.setItem("iv_rated", "1"); window.open(PLAY_URL, "_blank"); G.paused = false; }], [T("cont"), () => { G.paused = false; }]]);
+}
+
+// ============================================================ draw
+function drawSprite(name, frame, x, y, w, flip, alpha) {
+  const im = A[name]; if (!im) return; const n = SHEET[name] || 1, fw = im.width / n, h = w * im.height / fw;
+  ctx.save(); ctx.globalAlpha = alpha == null ? 1 : alpha; ctx.translate(x, y); if (flip) ctx.scale(-1, 1);
+  ctx.drawImage(im, (Math.floor(frame) % n) * fw, 0, fw, im.height, -w / 2, -h, w, h); ctx.restore();
+}
+function shadow(x, y, rx, ry, a) { ctx.fillStyle = `rgba(0,0,0,${a || .35})`; ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, 6.283); ctx.fill(); }
+function bar(x, y, w, f, col) { ctx.fillStyle = "rgba(0,0,0,.6)"; ctx.fillRect(x - w / 2 - 1, y - 1, w + 2, 6); ctx.fillStyle = col; ctx.fillRect(x - w / 2, y, w * clamp(f, 0, 1), 4); }
+let darkC = document.createElement("canvas");
+function draw() {
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, Hh);
+  ctx.save(); ctx.translate(W / 2, Hh / 2); ctx.scale(cam.z, cam.z); ctx.translate(-cam.x, -cam.y);
+  const v0 = toWorld(0, 0), v1 = toWorld(W, Hh);
+  // water (two drifting layers)
+  ctx.save(); ctx.fillStyle = pats.water; const o1 = G.t * 9; ctx.translate(o1 % 512, (o1 * .6) % 512); ctx.fillRect(v0.x - 600, v0.y - 600, v1.x - v0.x + 1200, v1.y - v0.y + 1200); ctx.restore();
+  ctx.save(); ctx.globalAlpha = .35 + .1 * Math.sin(G.t * .7); ctx.fillStyle = pats.water; ctx.translate(-(G.t * 6) % 512 + 256, 256 - (G.t * 4) % 512); ctx.fillRect(v0.x - 600, v0.y - 600, v1.x - v0.x + 1200, v1.y - v0.y + 1200); ctx.restore();
+  // terrain
+  for (let cy = Math.max(0, Math.floor(v0.y / CH)); cy <= Math.min(WORLD / CH - 1, Math.floor(v1.y / CH)); cy++)
+    for (let cx = Math.max(0, Math.floor(v0.x / CH)); cx <= Math.min(WORLD / CH - 1, Math.floor(v1.x / CH)); cx++) ctx.drawImage(getChunk(cx, cy), cx * CH, cy * CH);
+  // selection rings & targets
+  for (const a of astros) if (a.sel && !a.downT) { ctx.strokeStyle = "rgba(90,240,255,.9)"; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.ellipse(a.x, a.y, 22, 9, 0, 0, 6.283); ctx.stroke(); }
+  for (const f of fx) if (f.t === "ring") { ctx.strokeStyle = f.c; ctx.globalAlpha = f.life * 1.6; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(f.x, f.y, 30 * (1.4 - f.life), 13 * (1.4 - f.life), 0, 0, 6.283); ctx.stroke(); ctx.globalAlpha = 1; }
+  // depth-sorted objects
+  const objs = [];
+  const vis = o => o.x > v0.x - 300 && o.x < v1.x + 300 && o.y > v0.y - 100 && o.y < v1.y + 400;
+  for (const o of buildings) if (vis(o)) objs.push(o);
+  for (const o of deposits) if (o.amt > 0 && vis(o)) objs.push(o);
+  for (const o of props) if (vis(o)) objs.push(o);
+  for (const o of astros) if (!o.downT && vis(o)) objs.push(o);
+  for (const o of beasts) if (vis(o)) objs.push(o);
+  objs.sort((a, b) => a.y - b.y);
+  for (const o of objs) {
+    if (o.kind === "b") {
+      if (!o.built || o.fade < 1) { const shown = o.vid && drawBuildVideo(o); if (!shown && !o.built) { ctx.globalAlpha = .25 + o.prog * .5; } }
+      if (o.built) { ctx.globalAlpha = o.fade; ctx.drawImage(A[BT[o.type].img], o.x - o.w / 2, o.y - o.h, o.w, o.h); ctx.globalAlpha = 1; }
+      else if (!o.vid || !bvOk) { ctx.drawImage(A[BT[o.type].img], o.x - o.w / 2, o.y - o.h, o.w, o.h); ctx.globalAlpha = 1; }
+      if (!o.built) bar(o.x, o.y + 8, 80, o.prog, "#3cf");
+      if (o.hp < o.max) bar(o.x, o.y - o.h - 8, o.type === "command" ? 140 : 70, o.hp / o.max, o.hp / o.max > .4 ? "#4f8" : "#f54");
+    } else if (o.kind === "d") {
+      const w = 82 * (.55 + .45 * o.amt / o.max); const pulse = .5 + .5 * Math.sin(G.t * 2 + o.x);
+      ctx.save(); ctx.globalCompositeOperation = "lighter"; const gr = ctx.createRadialGradient(o.x, o.y - 25, 4, o.x, o.y - 25, 70); gr.addColorStop(0, `rgba(60,240,255,${.22 + .12 * pulse})`); gr.addColorStop(1, "rgba(60,240,255,0)"); ctx.fillStyle = gr; ctx.fillRect(o.x - 70, o.y - 95, 140, 140); ctx.restore();
+      const im = A.p_crystal; ctx.drawImage(im, o.x - w / 2, o.y - w * im.height / im.width + 8, w, w * im.height / im.width);
+    } else if (o.kind === "p") {
+      const im = o.type === "tree" ? A.p_tree : A.p_rock, w = (o.type === "tree" ? 120 : 72) * o.s, h = w * im.height / im.width;
+      shadow(o.x + 8, o.y, w * .32, w * .1, .3);
+      ctx.save(); ctx.translate(o.x, o.y); if (o.flip) ctx.scale(-1, 1); ctx.drawImage(im, -w / 2, -h + (o.type === "tree" ? 6 : 10), w, h); ctx.restore();
+    } else if (o.kind === "a") {
+      shadow(o.x, o.y, 14, 5);
+      const f = o.moving ? o.anim : 0, name = "s_astro_" + o.dir;
+      drawSprite(name, f, o.x, o.y + 2, o.dir === "side" ? 36 : 29, o.dir === "side" && o.flip);
+      if (o.carry) { ctx.fillStyle = "#6ff"; ctx.beginPath(); ctx.arc(o.x + 10, o.y - 44, 5, 0, 6.283); ctx.fill(); }
+      if (o.job && !o.path && !o.job.back && o.mineT > 0) bar(o.x, o.y - 72, 34, o.mineT / 2.4, "#6ff");
+      if (o.hp < o.max) bar(o.x, o.y - 70, 30, o.hp / o.max, "#4f8");
+    } else if (o.kind === "e") {
+      const a = clamp(o.alpha, 0, 1); shadow(o.x, o.y, o.dir === "side" ? 46 : 26, 9, .4 * a);
+      ctx.strokeStyle = `rgba(255,70,60,${.55 * a})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(o.x, o.y, o.dir === "side" ? 50 : 30, 12, 0, 0, 6.283); ctx.stroke();
+      drawSprite("s_beast_" + (o.dir === "front" ? "front" : "side"), o.moving ? o.anim : 0, o.x, o.y + 4, o.dir === "front" ? 58 : 150, o.flip, a);
+      if (o.hp < o.max) bar(o.x, o.y - 90, 50, o.hp / o.max, "#f54");
+    }
+  }
+  // lasers
+  ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.lineCap = "round";
+  for (const [x1, y1, x2, y2] of lasers) { const fl = .7 + .3 * Math.random(); ctx.strokeStyle = `rgba(40,220,255,${.35 * fl})`; ctx.lineWidth = 10; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); ctx.strokeStyle = `rgba(220,255,255,${.95 * fl})`; ctx.lineWidth = 2.5; ctx.stroke(); ctx.fillStyle = "rgba(120,240,255,.8)"; ctx.beginPath(); ctx.arc(x2, y2, 7 + Math.random() * 4, 0, 6.283); ctx.fill(); }
+  for (const f of fx) {
+    if (f.t === "boom") { const k = 1 - f.life / (f.big ? 1 : .6), r = (f.big ? 140 : 46) * (.3 + k); const gr = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, r); gr.addColorStop(0, `rgba(255,240,200,${.9 * (1 - k)})`); gr.addColorStop(.4, `rgba(80,220,255,${.6 * (1 - k)})`); gr.addColorStop(1, "rgba(0,0,0,0)"); ctx.fillStyle = gr; ctx.fillRect(f.x - r, f.y - r, r * 2, r * 2); }
+    if (f.t === "hit") { ctx.fillStyle = `rgba(255,120,80,${f.life * 2})`; ctx.beginPath(); ctx.arc(f.x, f.y, 10, 0, 6.283); ctx.fill(); }
+  }
+  ctx.restore();
+  // placement ghost
+  if (ghost) { const ok = ghostOk(), d = BT.tower, im = A.b_tower, w = d.w, h = w * im.height / im.width; ctx.globalAlpha = .6; ctx.drawImage(im, ghost.x - w / 2, ghost.y - h, w, h); ctx.globalAlpha = 1; ctx.strokeStyle = ok ? "rgba(80,255,160,.9)" : "rgba(255,80,80,.9)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(ghost.x, ghost.y - 20, 60, 26, 0, 0, 6.283); ctx.stroke(); ctx.setLineDash([8, 8]); ctx.strokeStyle = "rgba(80,230,255,.35)"; ctx.beginPath(); ctx.ellipse(ghost.x, ghost.y - 20, d.range, d.range * .8, 0, 0, 6.283); ctx.stroke(); ctx.setLineDash([]); }
+  // floating texts
+  ctx.font = "bold 18px system-ui,sans-serif"; ctx.textAlign = "center";
+  for (const f of fx) if (f.t === "txt") { ctx.globalAlpha = clamp(f.life, 0, 1); ctx.fillStyle = "#8ff"; ctx.fillText(f.s, f.x, f.y - (1.2 - f.life) * 30); ctx.globalAlpha = 1; }
+  ctx.restore();
+  // night overlay with light holes
+  const nightK = nightAmount();
+  if (nightK > 0.01) {
+    if (darkC.width !== cv.width || darkC.height !== cv.height) { darkC.width = cv.width; darkC.height = cv.height; }
+    const g = darkC.getContext("2d"); g.setTransform(DPR, 0, 0, DPR, 0, 0); g.globalCompositeOperation = "source-over"; g.clearRect(0, 0, W, Hh);
+    g.fillStyle = `rgba(2,6,26,${.68 * nightK})`; g.fillRect(0, 0, W, Hh);
+    g.globalCompositeOperation = "destination-out";
+    const hole = (x, y, r, a) => { const sx = (x - cam.x) * cam.z + W / 2, sy = (y - cam.y) * cam.z + Hh / 2, rr = r * cam.z; if (sx < -rr || sy < -rr || sx > W + rr || sy > Hh + rr) return; const gr = g.createRadialGradient(sx, sy, 0, sx, sy, rr); gr.addColorStop(0, `rgba(0,0,0,${a})`); gr.addColorStop(1, "rgba(0,0,0,0)"); g.fillStyle = gr; g.fillRect(sx - rr, sy - rr, rr * 2, rr * 2); };
+    for (const b of buildings) hole(b.x, b.y - b.h * .4, b.type === "command" ? 330 : 190, .85);
+    for (const a of astros) if (!a.downT) hole(a.x, a.y - 20, 90, .7);
+    for (const d of deposits) if (d.amt > 0) hole(d.x, d.y - 20, 80, .55);
+    for (const l of lasers) hole(l[2], l[3], 70, .8);
+    for (const e of beasts) if (!e.flee) hole(e.x, e.y - 30, 85, .6);
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(darkC, 0, 0);
+  }
+  drawMini();
+}
+function nightAmount() {
+  if (G.phase === "night") return smooth(0, 6, G.phaseT) * (1 - smooth(NIGHT_LEN - 6, NIGHT_LEN, G.phaseT));
+  return G.day === 1 && G.tut <= 4 ? 0 : smooth(DAY_LEN - 12, DAY_LEN, G.phaseT) * .6;
+}
+function drawMini() {
+  const s = mini.width / WORLD; mctx.imageSmoothingEnabled = false; mctx.drawImage(miniBase, 0, 0, mini.width, mini.height);
+  for (const d of deposits) if (d.amt > 0) { mctx.fillStyle = "#5ff"; mctx.fillRect(d.x * s - 1.5, d.y * s - 1.5, 3, 3); }
+  for (const b of buildings) { mctx.fillStyle = "#fff"; const r = b.type === "command" ? 3 : 2; mctx.fillRect(b.x * s - r, b.y * s - r, r * 2, r * 2); }
+  for (const a of astros) if (!a.downT) { mctx.fillStyle = "#7f7"; mctx.fillRect(a.x * s - 1, a.y * s - 1, 2, 2); }
+  for (const e of beasts) { mctx.fillStyle = "#f44"; mctx.fillRect(e.x * s - 1.5, e.y * s - 1.5, 3, 3); }
+  const v0 = toWorld(0, 0), v1 = toWorld(W, Hh); mctx.strokeStyle = "rgba(255,255,255,.8)"; mctx.lineWidth = 1; mctx.strokeRect(v0.x * s, v0.y * s, (v1.x - v0.x) * s, (v1.y - v0.y) * s);
+}
+function hud() {
+  $("crys").textContent = "💎 " + (G.crystals | 0);
+  $("crew").textContent = "👨‍🚀 " + astros.filter(a => !a.downT).length + "/" + G.maxCrew;
+  const left = G.phase === "day" ? (G.day === 1 && G.tut <= 4 ? null : DAY_LEN - G.phaseT) : NIGHT_LEN - G.phaseT;
+  const tm = left == null ? "" : " · " + Math.max(0, Math.ceil(left)) + "s";
+  $("clock").textContent = (G.phase === "day" ? "☀️ " + T("day") + " " + G.day : "🌙 " + T("night") + " " + G.day) + tm;
+}
+
+// ============================================================ intro video
+function playIntro(done) {
+  const box = $("introBox"), v = $("introVid"), sub = $("sub"); box.classList.add("show"); G.paused = true;
+  const times = [[4.3, 8.4], [8.9, 12.6], [15.9, 20.2], [23.3, 28.6], [31, 35]], lines = TX.subs[AR ? 0 : 1];
+  v.src = "assets/v_intro.mp4"; v.currentTime = 0; v.muted = false;
+  let fin = false; const end = () => { if (fin) return; fin = true; v.pause(); box.classList.remove("show"); sub.textContent = ""; localStorage.setItem("iv_intro", "1"); done && done(); };
+  v.ontimeupdate = () => { const t = v.currentTime; const i = times.findIndex(([a, b]) => t >= a && t <= b); sub.textContent = i >= 0 ? lines[i] : ""; };
+  v.onended = end; v.onerror = end; $("skip").onclick = end;
+  v.play().catch(() => { v.muted = true; v.play().catch(end); });
+}
+
+// ============================================================ main loop
+let last = 0;
+function frame(ts) {
+  const dt = Math.min(.05, (ts - last) / 1000 || 0); last = ts;
+  if (!G.paused && !G.over) update(dt);
+  draw(); hud();
+  requestAnimationFrame(frame);
+}
+document.addEventListener("visibilitychange", () => { if (document.hidden) { if (!G.paused) { G.paused = true; G.autoPaused = true; } bv.pause(); } else if (G.autoPaused) { G.autoPaused = false; G.paused = false; if (buildings.some(b => !b.built) && bvOk) bv.play().catch(() => { }); } });
+
+async function boot() {
+  resize(); await loadAll(); makePats();
+  if (A.s_astro_front) { const s = A.s_astro_front, fw = s.width / 12, c = document.createElement("canvas"); c.width = fw; c.height = s.height; c.getContext("2d").drawImage(s, 0, 0, fw, s.height, 0, 0, fw, s.height); $("astroIcon").src = c.toDataURL(); }
+  if (!load()) newGame((Math.random() * 1e9) | 0);
+  $("loading").style.display = "none";
+  const go = () => { G.paused = false; if (G.tut >= 1 && G.tut <= 5) setTut(G.tut); };
+  if (!localStorage.getItem("iv_intro") && !/nointro/.test(location.search)) playIntro(go); else go();
+  requestAnimationFrame(frame);
+}
+window.__G = () => ({ G, buildings, astros, beasts, deposits, cam, TH });
+boot();
+</script>
+</body>
+</html>

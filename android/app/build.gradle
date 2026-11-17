@@ -1,0 +1,46 @@
+plugins { id 'com.android.application' }
+
+android {
+    namespace 'com.interplanetary.voyage'
+    compileSdk 36
+
+    defaultConfig {
+        applicationId "com.interplanetary.voyage"
+        minSdk 24
+        targetSdk 36
+        versionCode 1
+        versionName "0.1"
+    }
+
+    buildFeatures { buildConfig true }
+    lint { checkReleaseBuilds false; abortOnError false }
+
+    // The game itself (HTML + art + videos) lives in /game at the repo root.
+    sourceSets { main { assets.srcDirs = ['../../game'] } }
+    androidResources { noCompress += ['mp4', 'jpg', 'png'] }
+
+    signingConfigs {
+        // Fixed key for TEST builds only, so new test APKs install over old ones.
+        // The Google Play release key is separate and is never stored in this repo.
+        testbuilds {
+            storeFile file('test-builds.keystore')
+            storePassword 'testbuilds'
+            keyAlias 'testbuilds'
+            keyPassword 'testbuilds'
+        }
+    }
+
+    buildTypes {
+        debug { signingConfig signingConfigs.testbuilds }
+        release { minifyEnabled false }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'androidx.webkit:webkit:1.12.1'
+}
