@@ -111,6 +111,10 @@ const TX = {
   d_greenhouse: ["تزرع الأكل للطاقم. كل صوبة تكفي 5 رواد.", "Grows food for the crew. Each one feeds 5 astronauts."],
   d_quarters: ["تزيد عدد الرواد 4، وينضم رائد جديد فوراً.", "Room for 4 more astronauts; one joins right away."],
   d_tower: ["يضرب الكائنات تلقائياً ويحتاج طاقة.", "Fires at creatures automatically; needs power."],
+  lvl: ["المستوى", "Level"], upg: ["⬆ تحديث", "⬆ Upgrade"], maxL: ["أعلى مستوى ✔", "Max level ✔"], upgDone: ["تم التحديث ⬆", "Upgrade complete ⬆"],
+  needUp: [" يحتاج تحديث ⬆ اضغط عليه", " needs an upgrade ⬆ tap it"], upgBusy: ["جاري التحديث...", "Upgrading..."],
+  st_command: ["تحمّل أعلى للهجوم", "Tougher against attacks"], st_power: ["طاقة", "power"], st_oxygen: ["هواء يكفي", "air for"], st_greenhouse: ["أكل يكفي", "food for"],
+  st_quarters: ["سكن يكفي", "room for"], st_tower: ["قوة الليزر", "laser power"], st_crew: ["رواد", "astronauts"],
   d_astro: ["رائد جديد يجمع الكريستال. يحتاج أكسجين وأكل.", "A new astronaut to mine crystals. Needs oxygen and food."],
   free: ["مجاناً", "Free"], follow: ["اتبع التعليمات أولاً 👆", "Follow the instructions first 👆"],
   lowP: ["⚡ الطاقة لا تكفي، الأبراج أضعف. ابنِ محطة طاقة", "⚡ Not enough power, towers are weaker. Build a power station"],
@@ -370,9 +374,14 @@ const TUT_WRECK = { 1: "command", 2: "power", 3: "oxygen", 4: "greenhouse", 8: "
 function footY(b) { return b.y - b.h * .18; }
 function addBuilding(type, x, y, built) {
   const d = BT[type], im = A[d.img];
-  const b = { kind: "b", type, x, y, w: d.w, h: d.w * im.height / im.width, hp: d.hp, max: d.hp, r: d.r, built: !!built, prog: built ? 1 : 0, fade: built ? 1 : 0, aim: null };
+  const b = { kind: "b", type, x, y, w: d.w, h: d.w * im.height / im.width, hp: d.hp, max: d.hp, r: d.r, built: !!built, prog: built ? 1 : 0, fade: built ? 1 : 0, aim: null, lvl: 1, upT: 0 };
   buildings.push(b); markOcc(x, footY(b), d.r, 1); return b;
 }
+const MAX_LVL = 3;
+const sumLvl = t => buildings.reduce((n, b) => n + (b.type === t && b.built ? b.lvl : 0), 0);
+const upCost = b => Math.round(Math.max(BT[b.type].cost, 80) * 1.2 * b.lvl);
+function setLvl(b, l) { b.lvl = l; const k = 1 + .5 * (l - 1), f = b.hp / b.max; b.max = Math.round(BT[b.type].hp * k); b.hp = Math.round(b.max * f); }
+const towerDps = b => BT.tower.dps * (1 + .5 * (b.lvl - 1)), towerRange = b => BT.tower.range + 45 * (b.lvl - 1);
 function addAstro(x, y) { const a = { kind: "a", x, y, hp: 60, max: 60, path: null, job: null, carry: 0, mineT: 0, dir: "front", flip: false, anim: Math.random() * 12, moving: false, sel: false, downT: 0 }; astros.push(a); return a; }
 function cmd() { return buildings.find(b => b.type === "command" && b.built); }
 const count = t => buildings.filter(b => b.type === t && b.built).length;
@@ -413,7 +422,7 @@ function scatter(r) {
 function save() {
   const s = {
     v: 2, seed, day: G.day, crystals: G.crystals, tut: G.tut,
-    b: buildings.filter(b => b.built).map(b => [b.type, b.x | 0, b.y | 0, b.hp | 0]),
+    b: buildings.filter(b => b.built).map(b => [b.type, b.x | 0, b.y | 0, b.hp | 0, b.lvl]),
     w: wrecks.map(w => [w.type, w.x | 0, w.y | 0]),
     a: astros.length, d: deposits.map(d => [d.x | 0, d.y | 0, d.amt | 0]), p: props.map(p => [p.type, p.x | 0, p.y | 0, +p.s.toFixed(2), p.flip ? 1 : 0])
   };
@@ -425,7 +434,7 @@ function load() {
   genWorld(s.seed);
   buildings = []; astros = []; beasts = []; fx = []; lasers = []; wrecks = [];
   for (const [t, x, y] of s.w) addWreck(t, x, y);
-  for (const [t, x, y, hp] of s.b) { const b = addBuilding(t, x, y, true); b.hp = hp; }
+  for (const [t, x, y, hp, lv] of s.b) { const b = addBuilding(t, x, y, true); setLvl(b, lv || 1); b.hp = Math.min(hp, b.max); }
   deposits = s.d.map(([x, y, amt]) => { markOcc(x, y, 30, 1); return { kind: "d", x, y, amt, max: 250 }; });
   props = s.p.map(([type, x, y, sc, f]) => { markOcc(x, y, type === "tree" ? 22 : 26, 1); return { kind: "p", type, x, y, s: sc, flip: !!f }; });
   const c = cmd() || { x: WORLD / 2, y: WORLD / 2 + 60 };
@@ -467,7 +476,8 @@ function tap(sx, sy) {
   // wreckage -> build offer
   const wk = wrecks.find(w => Math.hypot(p.x - w.x, p.y - (w.y - 40)) < 110);
   if (wk) { openWreck(wk); return; }
-  const sel = selected(); if (!sel.length) return;
+  const sel = selected();
+  if (!sel.length) { const bh = buildings.find(b => b.built && p.x > b.x - b.w * .4 && p.x < b.x + b.w * .4 && p.y > b.y - b.h * .85 && p.y < b.y - b.h * .05); if (bh) openBuilding(bh); return; }
   const dep = deposits.find(d => d.amt > 0 && Math.hypot(p.x - d.x, p.y - (d.y - 20)) < 70);
   if (dep) { if (!cmd()) return toast(T("follow")); sel.forEach(a => { a.job = { dep }; goTo(a, dep.x, dep.y + 26); }); fx.push({ t: "ring", x: dep.x, y: dep.y, c: "#5ff", life: .6 }); return; }
   sel.forEach((a, i) => { a.job = null; const o = i - (sel.length - 1) / 2; goTo(a, p.x + o * 30, p.y + (i % 2) * 20); });
@@ -476,16 +486,37 @@ function tap(sx, sy) {
 function goTo(u, x, y) { u.path = findPath(u.x, u.y, x, y, false) || null; }
 
 // ============================================================ HUD wiring
-let wreckSel = null;
+let wreckSel = null, bldSel = null;
+function statLine(b, l) {
+  const t = b.type;
+  if (t === "power") return "⚡ " + (30 * l) + " " + T("st_power");
+  if (t === "oxygen" || t === "greenhouse") return T("st_" + t) + " " + (5 * l) + " " + T("st_crew");
+  if (t === "quarters") return T("st_quarters") + " " + (4 * l) + " " + T("st_crew");
+  if (t === "tower") return T("st_tower") + " " + Math.round(BT.tower.dps * (1 + .5 * (l - 1))) + " · ↔ " + (BT.tower.range + 45 * (l - 1));
+  return T("st_command") + " · ❤ " + Math.round(BT.command.hp * (1 + .5 * (l - 1)));
+}
+function openBuilding(b) {
+  bldSel = b; wreckSel = null; const d = BT[b.type];
+  $("wImg").src = "assets/" + d.img + ".png"; $("wName").textContent = T(b.type) + " · " + T("lvl") + " " + b.lvl;
+  $("wDesc").textContent = statLine(b, b.lvl) + (b.lvl < MAX_LVL ? "  →  " + statLine(b, b.lvl + 1) : "");
+  $("wGo").textContent = b.upT > 0 ? T("upgBusy") : b.lvl >= MAX_LVL ? T("maxL") : T("upg") + " · 💎 " + upCost(b);
+  G.paused = true; $("wreckP").classList.add("show");
+}
 function openWreck(w) {
   if (G.tut <= 9 && TUT_WRECK[G.tut] !== w.type) return toast(T("follow"));
-  wreckSel = w; const d = BT[w.type];
+  wreckSel = w; bldSel = null; const d = BT[w.type];
   $("wImg").src = "assets/" + d.img + ".png"; $("wName").textContent = T(w.type); $("wDesc").textContent = T("d_" + w.type);
   $("wGo").textContent = "🏗️ " + T("build") + " · " + (d.cost ? "💎 " + d.cost : T("free"));
   G.paused = true; $("wreckP").classList.add("show");
 }
-$("wNo").onclick = () => { $("wreckP").classList.remove("show"); G.paused = false; wreckSel = null; };
+$("wNo").onclick = () => { $("wreckP").classList.remove("show"); G.paused = false; wreckSel = null; bldSel = null; };
 $("wGo").onclick = () => {
+  if (bldSel) {
+    const b = bldSel; if (b.lvl >= MAX_LVL || b.upT > 0) return;
+    if (G.crystals < upCost(b)) return toast(T("noC"));
+    G.crystals -= upCost(b); b.upT = 4; chime(700);
+    $("wreckP").classList.remove("show"); G.paused = false; bldSel = null; return;
+  }
   const w = wreckSel, d = BT[w.type];
   if (G.crystals < d.cost) return toast(T("noC"));
   if (buildings.some(b => !b.built)) return toast(T("busy"));
@@ -592,9 +623,20 @@ function update(dt) {
   if (G.focus) { const k = Math.min(1, dt * 3); cam.x = lerp(cam.x, G.focus.x, k); cam.y = lerp(cam.y, G.focus.y, k); clampCam(); if ((G.focus.t -= dt) <= 0) G.focus = null; }
   // power & life support
   const night = G.phase === "night";
-  G.power.prod = count("power") * 30 * (night ? .5 : 1); G.power.use = (cmd() ? 5 : 0) + count("tower") * 8;
+  G.power.prod = sumLvl("power") * 30 * (night ? .5 : 1); G.power.use = (cmd() ? 5 : 0) + sumLvl("tower") * 8;
   G.power.k = G.power.use <= G.power.prod ? 1 : Math.max(.35, G.power.prod / Math.max(1, G.power.use));
-  G.maxCrew = cmd() ? Math.min(3 + 4 * count("quarters"), 3 + 5 * count("oxygen"), 3 + 5 * count("greenhouse"), 16) : 3;
+  const capQ = 3 + 4 * sumLvl("quarters"), capO = 3 + 5 * sumLvl("oxygen"), capG = 3 + 5 * sumLvl("greenhouse");
+  G.maxCrew = cmd() ? Math.min(capQ, capO, capG, 24) : 3;
+  // which building should ask for an upgrade
+  G.need = null; G.needB = null;
+  if (G.tut > 9) {
+    const crew = astros.length, lim = [["quarters", capQ], ["oxygen", capO], ["greenhouse", capG]].sort((a, b) => a[1] - b[1])[0];
+    if (G.power.use > G.power.prod / (night ? .5 : 1) * .9) G.need = "power";
+    else if (crew >= G.maxCrew - 1) G.need = lim[0];
+    if (G.need) { const cand = buildings.filter(b => b.type === G.need && b.built && b.lvl < MAX_LVL).sort((a, b) => a.lvl - b.lvl)[0]; G.needB = cand || null; if (!cand) G.need = null; else if (G.lastNeed !== G.need) { G.lastNeed = G.need; toast(T(G.need) + T("needUp")); } }
+    else G.lastNeed = null;
+  }
+  for (const b of buildings) if (b.upT > 0 && (b.upT -= dt) <= 0) { b.upT = 0; setLvl(b, b.lvl + 1); chime(1300); toast(T(b.type) + " · " + T("upgDone")); fx.push({ t: "boom", x: b.x, y: b.y - b.h * .45, life: .6 }); }
   // day / night cycle (the first day waits for the tutorial)
   const dayLen = G.day === 1 && G.tut <= 9 ? 1e9 : DAY_LEN;
   if (G.phase === "day" && G.phaseT >= dayLen) {
@@ -666,9 +708,9 @@ function update(dt) {
   lasers = [];
   for (const b of buildings) {
     if (b.type !== "tower" || !b.built) continue;
-    const d = BT.tower; let tg = b.aim;
-    if (!tg || tg.hp <= 0 || tg.flee || dist(tg, b) > d.range) { tg = null; let bd = d.range; for (const e of beasts) { if (e.flee) continue; const k = dist(e, b); if (k < bd) { bd = k; tg = e; } } if (tg && tg !== b.aim) zap(); b.aim = tg; }
-    if (tg) { tg.hp -= d.dps * G.power.k * dt; lasers.push([b.x - b.w * .22, b.y - b.h * .78, tg.x, tg.y - 30, G.power.k]); if (tg.hp <= 0) { fx.push({ t: "boom", x: tg.x, y: tg.y - 30, life: .6 }); G.crystals += 5; fx.push({ t: "txt", x: tg.x, y: tg.y - 60, s: "+5 💎", life: 1 }); } }
+    const rng2 = towerRange(b); let tg = b.aim;
+    if (!tg || tg.hp <= 0 || tg.flee || dist(tg, b) > rng2) { tg = null; let bd = rng2; for (const e of beasts) { if (e.flee) continue; const k = dist(e, b); if (k < bd) { bd = k; tg = e; } } if (tg && tg !== b.aim) zap(); b.aim = tg; }
+    if (tg) { tg.hp -= towerDps(b) * G.power.k * dt; lasers.push([b.x - b.w * .22, b.y - b.h * .78, tg.x, tg.y - 30, G.power.k]); if (tg.hp <= 0) { fx.push({ t: "boom", x: tg.x, y: tg.y - 30, life: .6 }); G.crystals += 5; fx.push({ t: "txt", x: tg.x, y: tg.y - 60, s: "+5 💎", life: 1 }); } }
   }
   // buildings destroyed
   for (const b of buildings) if (b.hp <= 0 && !b.dead) { b.dead = true; markOcc(b.x, footY(b), b.r, 0); fx.push({ t: "boom", x: b.x, y: b.y - b.h * .4, life: 1, big: true }); if (b.type === "command") lose(); }
@@ -739,6 +781,9 @@ function draw() {
       else if (!shown) { ctx.drawImage(A[BT[o.type].img], o.x - o.w / 2, o.y - o.h, o.w, o.h); ctx.globalAlpha = 1; }
       if (!o.built) bar(o.x, o.y + 8, 80, o.prog, "#3cf");
       if (o.hp < o.max) bar(o.x, o.y - o.h - 8, o.type === "command" ? 140 : 70, o.hp / o.max, o.hp / o.max > .4 ? "#4f8" : "#f54");
+      if (o.built && o.lvl > 1) { ctx.font = "bold 16px system-ui,sans-serif"; ctx.textAlign = "center"; ctx.fillStyle = "#ffd76a"; ctx.strokeStyle = "rgba(0,0,0,.7)"; ctx.lineWidth = 3; const txt = "▲".repeat(o.lvl - 1); ctx.strokeText(txt, o.x, o.y - o.h - 14); ctx.fillText(txt, o.x, o.y - o.h - 14); }
+      if (o.upT > 0) { const k = 1 - o.upT / 4; ctx.save(); ctx.globalCompositeOperation = "lighter"; const r = o.w * .55, gr = ctx.createRadialGradient(o.x, o.y - o.h * .45, r * .2, o.x, o.y - o.h * .45, r); gr.addColorStop(0, `rgba(120,240,255,${.25 + .2 * Math.sin(G.t * 10)})`); gr.addColorStop(1, "rgba(120,240,255,0)"); ctx.fillStyle = gr; ctx.fillRect(o.x - r, o.y - o.h * .45 - r, r * 2, r * 2); ctx.restore(); bar(o.x, o.y + 8, 80, k, "#ffd76a"); }
+      if (G.needB === o && o.upT <= 0) { const bob = Math.sin(G.t * 5) * 6; ctx.font = "bold 34px system-ui,sans-serif"; ctx.textAlign = "center"; ctx.fillStyle = "#5f8"; ctx.strokeStyle = "rgba(0,0,0,.8)"; ctx.lineWidth = 4; ctx.strokeText("⬆", o.x, o.y - o.h - 26 + bob); ctx.fillText("⬆", o.x, o.y - o.h - 26 + bob); }
     } else if (o.kind === "w") {
       const im = A.b_wreck, w = 200, h = w * im.height / im.width; ctx.drawImage(im, o.x - w / 2, o.y - h + 20, w, h);
       const on = G.tut > 9 || TUT_WRECK[G.tut] === o.type, pulse = .5 + .5 * Math.sin(G.t * 4);
@@ -770,7 +815,7 @@ function draw() {
   ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.lineCap = "round";
   for (const [x1, y1, x2, y2, pk] of lasers) { const fl = (.7 + .3 * Math.random()) * (pk < 1 ? .55 : 1); ctx.strokeStyle = `rgba(40,220,255,${.35 * fl})`; ctx.lineWidth = 10; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); ctx.strokeStyle = `rgba(220,255,255,${.95 * fl})`; ctx.lineWidth = 2.5; ctx.stroke(); ctx.fillStyle = "rgba(120,240,255,.8)"; ctx.beginPath(); ctx.arc(x2, y2, 7 + Math.random() * 4, 0, 6.283); ctx.fill(); }
   for (const f of fx) {
-    if (f.t === "boom") { const k = 1 - f.life / (f.big ? 1 : .6), r = (f.big ? 140 : 46) * (.3 + k); const gr = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, r); gr.addColorStop(0, `rgba(255,240,200,${.9 * (1 - k)})`); gr.addColorStop(.4, `rgba(80,220,255,${.6 * (1 - k)})`); gr.addColorStop(1, "rgba(0,0,0,0)"); ctx.fillStyle = gr; ctx.fillRect(f.x - r, f.y - r, r * 2, r * 2); }
+    if (f.t === "boom") { const k = clamp(1 - f.life / (f.big ? 1 : .6), 0, 1), r = (f.big ? 140 : 46) * (.3 + k); const gr = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, r); gr.addColorStop(0, `rgba(255,240,200,${.9 * (1 - k)})`); gr.addColorStop(.4, `rgba(80,220,255,${.6 * (1 - k)})`); gr.addColorStop(1, "rgba(0,0,0,0)"); ctx.fillStyle = gr; ctx.fillRect(f.x - r, f.y - r, r * 2, r * 2); }
     if (f.t === "hit") { ctx.fillStyle = `rgba(255,120,80,${f.life * 2})`; ctx.beginPath(); ctx.arc(f.x, f.y, 10, 0, 6.283); ctx.fill(); }
   }
   ctx.restore();
@@ -837,9 +882,8 @@ function playIntro(done) {
 let last = 0;
 function frame(ts) {
   const dt = Math.min(.05, (ts - last) / 1000 || 0); last = ts;
-  if (!G.paused && !G.over) update(dt);
-  draw(); hud();
   requestAnimationFrame(frame);
+  try { if (!G.paused && !G.over) update(dt); draw(); hud(); } catch (e) { console.error(e); }
 }
 document.addEventListener("visibilitychange", () => { if (document.hidden) { if (!G.paused) { G.paused = true; G.autoPaused = true; } bv.pause(); } else if (G.autoPaused) { G.autoPaused = false; G.paused = false; if (buildings.some(b => !b.built) && bvOk) bv.play().catch(() => { }); } });
 
@@ -852,7 +896,7 @@ async function boot() {
   if (!localStorage.getItem("iv_intro") && !/nointro/.test(location.search)) playIntro(go); else go();
   requestAnimationFrame(frame);
 }
-window.__G = () => ({ G, buildings, astros, beasts, deposits, wrecks, cam, TH }); window.__open = w => openWreck(w);
+window.__G = () => ({ G, buildings, astros, beasts, deposits, wrecks, cam, TH }); window.__open = w => openWreck(w); window.__openB = b => openBuilding(b);
 boot();
 </script>
 </body>
