@@ -71,7 +71,7 @@ html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:syste
 .upProg{padding:0 16px 6px}
 .upProg .bar{height:16px}
 .upProg .cur{background:linear-gradient(180deg,#ffe58a,#d99a1a)!important}
-#hand{position:fixed;z-index:7;font-size:46px;pointer-events:none;display:none;filter:drop-shadow(0 0 10px #4ef);animation:bob .8s ease-in-out infinite alternate;transform-origin:50% 0}
+#hand{position:fixed;z-index:30;font-size:46px;pointer-events:none;display:none;filter:drop-shadow(0 0 10px #4ef);animation:bob .8s ease-in-out infinite alternate;transform-origin:50% 0}
 @keyframes bob{from{margin-top:0}to{margin-top:16px}}
 #buildP .card,#resP .card{max-height:90vh;overflow-y:auto}
 #buildP .item{width:124px;padding:6px;position:relative}
@@ -79,6 +79,8 @@ html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:syste
 #buildP .item b{font-size:13px}
 #buildP .item span{font-size:12px}
 .item .lk{display:block;font-size:11px;color:#ffb27a;margin-top:2px;line-height:1.25}
+.item.tutPick{border:2px solid #ffd76a;box-shadow:0 0 18px #ffd76a;animation:glow .7s ease-in-out infinite alternate}
+@keyframes glow{to{box-shadow:0 0 4px #ffd76a}}
 .item.lock img{filter:grayscale(1) brightness(.6)}
 #resP .card{width:min(94vw,640px);text-align:start}
 .rs{display:flex;align-items:center;gap:10px;background:rgba(10,40,56,.85);border:1px solid rgba(80,230,255,.3);border-radius:12px;padding:8px 10px;margin:6px 0}
@@ -141,6 +143,7 @@ html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:syste
   <div class="big" id="mResume" data-t="resume"></div>
   <div class="big alt" id="mIntro" data-t="intro"></div>
   <div class="big alt" id="mNew" data-t="newgame"></div>
+  <div class="big alt" id="mSound"></div>
 </div></div>
 
 <div class="panel" id="endP"><div class="card">
@@ -187,7 +190,8 @@ const TX = {
   t6: ["اضغط على الكريستال اللامع 💎 ليبدأ الجمع", "Tap a glowing crystal 💎 to start mining"],
   t7: ["رائع! اجمع 60 كريستال لبناء سكن الطاقم", "Great! Collect 60 crystals to build the Crew Quarters"],
   t8: ["ابنِ سكن الطاقم ليزيد عدد الرواد", "Build the Crew Quarters to grow your crew"],
-  t9: ["الكائنات تهاجم بالليل! اجمع 100 كريستال وابنِ برج الليزر", "Creatures attack at night! Collect 100 crystals and build the Laser Tower"],
+  t9: ["الكائنات تهاجم بالليل! اضغط زر «بناء» واختر برج الليزر، ثم اختر مكانه بنفسك", "Creatures attack at night! Tap «Build», pick the Laser Tower, then choose where it goes"],
+  t9p: ["اضغط على الخريطة في المكان اللي تحبه، وبعدين ✔", "Tap the map where you want it, then ✔"],
   t10: ["الليل قادم! أبراج الليزر تدافع تلقائياً. البناء متاح الآن من زر 🏗️", "Night is coming! Laser towers fire automatically. Build more from the 🏗️ button"],
   tdone: ["أنت الآن القائد. اصمد 5 ليالٍ، وحدّث مركز القيادة لتفتح مباني جديدة 🔓", "You are in command now. Survive 5 nights, and upgrade the Command Center to unlock new buildings 🔓"],
   help: ["حدد الرواد واضغط على الكريستال للجمع، أو على حيوان لصيده. ابنِ أبراج ليزر قبل الليل. الطاقم يحتاج هواء وخضار وبروتين. حدّث المباني لتفتح أبحاثاً ومباني جديدة.",
@@ -220,6 +224,7 @@ const TX = {
   robBusy: ["المصنع يصنع روبوت الآن", "The factory is already building a robot"], robNew: ["🤖 روبوت دفاع جديد جاهز", "🤖 A new defense robot is ready"], robLost: ["🤖 تم تدمير روبوت", "🤖 A robot was destroyed"],
   capt: ["+1 🐐 للمزرعة", "+1 🐐 to the farm"], meat: ["+🍖 لحم للطاقم", "+🍖 meat for the crew"], huntH: ["حدد رواد الفضاء ثم اضغط على الحيوان لصيده", "Select astronauts, then tap the animal to hunt it"],
   needBld: ["ابنِ ", "Build a "], needBld2: [" لزيادة الطاقم", " to grow your crew"],
+  sOn: ["الصوت: يعمل", "Sound: on"], sOff: ["الصوت: مكتوم", "Sound: off"],
   air: ["هواء", "Air"], veg: ["خضار", "Veg"], prot: ["بروتين", "Protein"],
   subs: [["الأرض تختنق... والموارد تنفد", "حتى اخترع العلماء محرك الالتواء", "ولأول مرة، أصبح السفر إلى النجوم ممكنًا", "الوجهة: كوكب بعيد... قد يكون موطننا الجديد", "لكن الرحلة لم تنتهِ كما خُطط لها..."],
          ["Earth is suffocating... and its resources are running out", "Until scientists invented the warp drive", "For the first time, travel to the stars became possible", "The destination: a distant planet... perhaps our new home", "But the journey did not end as planned..."]]
@@ -253,25 +258,60 @@ const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 let toastT = 0;
-function toast(m) { const e = $("toast"); e.textContent = m; e.style.display = "block"; toastT = 2.6; }
+const ERRK = ["noC", "follow", "bad", "nearW", "busy", "once", "rBusy", "robBusy", "robMax", "maxA", "needSup", "needUp", "upgBusy"];
+function toast(m) { if (ERRK.some(k => TX[k] && TX[k].includes(m))) sfx("error"); const e = $("toast"); e.textContent = m; e.style.display = "block"; toastT = 2.6; }
 
-// ============================================================ audio (code-made effects)
-let AC = null;
-function ac() { if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { } } return AC; }
-function zap() {
-  const a = ac(); if (!a) return;
-  const o = a.createOscillator(), g = a.createGain();
-  o.type = "sawtooth"; o.frequency.setValueAtTime(1400, a.currentTime); o.frequency.exponentialRampToValueAtTime(220, a.currentTime + .18);
-  g.gain.setValueAtTime(.06, a.currentTime); g.gain.exponentialRampToValueAtTime(.001, a.currentTime + .2);
-  o.connect(g).connect(a.destination); o.start(); o.stop(a.currentTime + .22);
+// ============================================================ audio
+// Each effect plays assets/sfx_<name>.mp3 when that file exists; until then a short synthesized stand-in is used.
+let AC = null, MASTER = null, MUTE = localStorage.getItem("iv_mute") === "1";
+const SFXN = ["click", "select", "order", "build", "done", "upgrade", "coin", "laser", "boom", "alarm", "dawn", "research", "error", "roar"], SFX = {}, sfxLast = {};
+function ac() {
+  if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); MASTER = AC.createGain(); MASTER.gain.value = MUTE ? 0 : 1; MASTER.connect(AC.destination); for (const n of SFXN) fetch("assets/sfx_" + n + ".mp3").then(r => r.ok ? r.arrayBuffer() : null).then(b => b && AC.decodeAudioData(b)).then(buf => { if (buf) SFX[n] = buf; }).catch(() => { }); } catch (e) { } }
+  if (AC && AC.state === "suspended") AC.resume().catch(() => { });
+  return AC;
 }
-function chime(f) {
-  const a = ac(); if (!a) return;
-  const o = a.createOscillator(), g = a.createGain();
-  o.type = "sine"; o.frequency.value = f || 660;
-  g.gain.setValueAtTime(.08, a.currentTime); g.gain.exponentialRampToValueAtTime(.001, a.currentTime + .35);
-  o.connect(g).connect(a.destination); o.start(); o.stop(a.currentTime + .4);
+function setMute(m) { MUTE = m; localStorage.setItem("iv_mute", m ? "1" : "0"); if (MASTER) MASTER.gain.value = m ? 0 : 1; }
+function tone(type, f0, f1, dur, vol, delay) {
+  const a = AC, t = a.currentTime + (delay || 0), o = a.createOscillator(), g = a.createGain();
+  o.type = type; o.frequency.setValueAtTime(f0, t); if (f1) o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + .008); g.gain.exponentialRampToValueAtTime(.0008, t + dur);
+  o.connect(g).connect(MASTER); o.start(t); o.stop(t + dur + .02);
 }
+function noise(dur, vol, f0, f1, delay) {
+  const a = AC, t = a.currentTime + (delay || 0), n = a.createBuffer(1, Math.ceil(a.sampleRate * dur), a.sampleRate), d = n.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  const src = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain(); src.buffer = n; f.type = "lowpass";
+  f.frequency.setValueAtTime(f0, t); f.frequency.exponentialRampToValueAtTime(f1, t + dur);
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0008, t + dur);
+  src.connect(f).connect(g).connect(MASTER); src.start(t);
+}
+const SYNTH = {
+  click: () => { tone("sine", 1500, 900, .05, .09); noise(.03, .05, 6000, 2000); },
+  select: () => { tone("sine", 880, 1320, .09, .08); tone("sine", 1760, 0, .12, .04, .05); },
+  order: () => { tone("triangle", 660, 990, .08, .08); tone("triangle", 990, 0, .1, .06, .07); },
+  build: () => { noise(.35, .12, 1200, 200); [392, 523, 659].forEach((f, i) => tone("triangle", f, 0, .22, .09, i * .08)); },
+  done: () => [523, 659, 784, 1047].forEach((f, i) => tone("triangle", f, 0, .35, .1, i * .09)),
+  upgrade: () => { [440, 554, 659, 880].forEach((f, i) => tone("sawtooth", f, 0, .18, .04, i * .06)); tone("sine", 220, 880, .4, .08); },
+  coin: () => { tone("sine", 1319, 0, .12, .08); tone("sine", 1760, 0, .2, .08, .07); },
+  laser: () => { tone("sawtooth", 1500, 200, .18, .05); tone("square", 3000, 600, .08, .02); },
+  boom: () => { noise(.6, .35, 1800, 60); tone("sine", 120, 40, .45, .25); },
+  alarm: () => [0, .35, .7].forEach(d => { tone("square", 440, 0, .16, .05, d); tone("square", 330, 0, .16, .05, d + .17); }),
+  dawn: () => [392, 494, 587, 784].forEach((f, i) => tone("sine", f, 0, .5, .07, i * .12)),
+  research: () => { [659, 784, 988, 1319].forEach((f, i) => tone("sine", f, 0, .45, .08, i * .1)); noise(.5, .03, 9000, 3000, .3); },
+  error: () => { tone("square", 180, 140, .14, .05); tone("square", 140, 110, .14, .05, .12); },
+  roar: () => { noise(.7, .2, 500, 120); tone("sawtooth", 110, 70, .7, .06); }
+};
+function sfx(n, vol) {
+  const a = ac(); if (!a || MUTE) return; const now = performance.now(); if (now - (sfxLast[n] || 0) < 70) return; sfxLast[n] = now;
+  try {
+    if (SFX[n]) { const src = a.createBufferSource(), g = a.createGain(); src.buffer = SFX[n]; g.gain.value = vol == null ? 1 : vol; src.connect(g).connect(MASTER); src.start(); }
+    else SYNTH[n] && SYNTH[n]();
+  } catch (e) { }
+}
+function zap() { sfx("laser"); }
+function chime() { sfx("select"); }
+// every button gives a click
+document.addEventListener("pointerdown", e => { ac(); if (e.target.closest && e.target.closest(".btn,.big,.item,.go,#skip")) sfx("click"); }, true);
 
 // ============================================================ world generation
 const CELL = 32, N = 160, WORLD = CELL * N;
@@ -483,7 +523,7 @@ function unlockReqs(t) {
   return o;
 }
 // tutorial: step -> which wreck the hand points at
-const TUT_WRECK = { 1: "command", 2: "power", 3: "oxygen", 4: "greenhouse", 8: "quarters", 9: "tower" };
+const TUT_WRECK = { 1: "command", 2: "power", 3: "oxygen", 4: "greenhouse", 8: "quarters" };
 
 function footY(b) { return b.y - b.h * .18; }
 function addBuilding(type, x, y, built) {
@@ -535,7 +575,6 @@ function newGame(sd) {
   addWreck("oxygen", c + 390, c - 110);
   addWreck("greenhouse", c - 370, c + 280);
   addWreck("quarters", c + 370, c + 290);
-  addWreck("tower", c + 10, c + 450);
   for (let i = 0; i < 2; i++) addAstro(c - 40 + i * 80, c + 190);
   scatter(rng(sd ^ 0x5151)); makeHerds(rng(sd ^ 0x7a7a));
   Object.assign(G, { t: 0, day: 1, phase: "day", phaseT: 0, crystals: 150, over: false, won: false, res: [], rc: {}, animals: 0, meat: 0, robT: 0, breedT: 0, unl: null });
@@ -614,7 +653,7 @@ function tap(sx, sy) {
   // astronaut hit test (sprite box)
   let hit = null, hd = 1e9;
   for (const a of astros) { if (a.downT) continue; const d = Math.hypot(p.x - a.x, p.y - (a.y - 28)); if (d < 42 / Math.min(cam.z, 1) && d < hd) { hd = d; hit = a; } }
-  if (hit) { hit.sel = !hit.sel; chime(hit.sel ? 880 : 520); updSelBtn(); return; }
+  if (hit) { hit.sel = !hit.sel; sfx(hit.sel ? "select" : "click"); updSelBtn(); return; }
   // wreckage -> build offer
   const wk = wrecks.find(w => Math.hypot(p.x - w.x, p.y - (w.y - 40)) < 110);
   if (wk) { openWreck(wk); return; }
@@ -623,12 +662,12 @@ function tap(sx, sy) {
   if (dr) {
     if (!sel.length) return showHint(T("huntH"), 4);
     if (!cmd()) return toast(T("follow"));
-    sel.forEach(a => { a.job = { deer: dr }; a.path = null; a.repath = 0; }); fx.push({ t: "ring", x: dr.x, y: dr.y, c: "#fd6", life: .6 }); return;
+    sel.forEach(a => { a.job = { deer: dr }; a.path = null; a.repath = 0; }); sfx("order"); fx.push({ t: "ring", x: dr.x, y: dr.y, c: "#fd6", life: .6 }); return;
   }
   if (!sel.length) { const bh = buildings.find(b => b.built && p.x > b.x - b.w * .4 && p.x < b.x + b.w * .4 && p.y > b.y - b.h * .85 && p.y < b.y - b.h * .05); if (bh) openBuilding(bh); return; }
   const dep = deposits.find(d => d.amt > 0 && Math.hypot(p.x - d.x, p.y - (d.y - 20)) < 70);
-  if (dep) { if (!cmd()) return toast(T("follow")); sel.forEach(a => { a.job = { dep }; goTo(a, dep.x, dep.y + 26); }); fx.push({ t: "ring", x: dep.x, y: dep.y, c: "#5ff", life: .6 }); return; }
-  sel.forEach((a, i) => { a.job = null; const o = i - (sel.length - 1) / 2; goTo(a, p.x + o * 30, p.y + (i % 2) * 20); });
+  if (dep) { if (!cmd()) return toast(T("follow")); sel.forEach(a => { a.job = { dep }; goTo(a, dep.x, dep.y + 26); }); sfx("order"); fx.push({ t: "ring", x: dep.x, y: dep.y, c: "#5ff", life: .6 }); return; }
+  sel.forEach((a, i) => { a.job = null; const o = i - (sel.length - 1) / 2; goTo(a, p.x + o * 30, p.y + (i % 2) * 20); }); sfx("order");
   fx.push({ t: "ring", x: p.x, y: p.y, c: "#7ff", life: .5 });
 }
 function goTo(u, x, y) { u.path = findPath(u.x, u.y, x, y, false) || null; }
@@ -675,7 +714,7 @@ $("upAct").onclick = () => {
     if (G.robT > 0) return toast(T("robBusy"));
     if (robots.length >= 2 * best("factory")) return toast(T("robMax"));
     if (G.crystals < ROBOT_COST) return toast(T("noC"));
-    G.crystals -= ROBOT_COST; G.robT = ROBOT_TIME; chime(700); toast("🤖 ⏱ " + fmt(ROBOT_TIME)); return;
+    G.crystals -= ROBOT_COST; G.robT = ROBOT_TIME; sfx("build"); toast("🤖 ⏱ " + fmt(ROBOT_TIME)); return;
   }
   $("upP").classList.remove("show"); bldSel = null; openRes(b.type);
 };
@@ -701,7 +740,7 @@ function refreshRes() {
 }
 function startRes(id) {
   const r = RES[id]; if (G.rc[r.lab]) return toast(T("rBusy")); if (G.crystals < r.c) return toast(T("noC"));
-  G.crystals -= r.c; const d = Math.round(resDur(id, r.lab)); G.rc[r.lab] = [id, d, d]; chime(800); refreshRes();
+  G.crystals -= r.c; const d = Math.round(resDur(id, r.lab)); G.rc[r.lab] = [id, d, d]; sfx("build"); refreshRes();
 }
 $("resClose").onclick = () => { $("resP").classList.remove("show"); resLab = null; G.paused = false; };
 function refreshUp() {
@@ -724,7 +763,7 @@ $("upGo").onclick = () => {
   const b = bldSel; if (!b || b.lvl >= MAX_LVL || b.upT > 0) return;
   if (!reqsOk(b)) return toast(T("reqMiss"));
   if (G.crystals < upCost(b)) return toast(T("noC"));
-  G.crystals -= upCost(b); b.upDur = b.upT = upTime(b); chime(700); refreshUp();
+  G.crystals -= upCost(b); b.upDur = b.upT = upTime(b); sfx("upgrade"); refreshUp();
 };
 $("upNow").onclick = () => toast(T("soon"));
 function openWreck(w) {
@@ -741,7 +780,7 @@ $("wGo").onclick = () => {
   if (buildings.some(b => !b.built)) return toast(T("busy"));
   $("wreckP").classList.remove("show"); G.paused = false; wreckSel = null;
   G.crystals -= d.cost; removeWreck(w);
-  const b = addBuilding(w.type, w.x, w.y, false); startConstruction(b);
+  const b = addBuilding(w.type, w.x, w.y, false); startConstruction(b); sfx("build");
 };
 $("bAll").onclick = () => { const s = astros.filter(a => !a.downT); const allOn = s.every(a => a.sel); s.forEach(a => a.sel = !allOn); updSelBtn(); };
 $("bNone").onclick = () => { astros.forEach(a => a.sel = false); updSelBtn(); };
@@ -755,22 +794,26 @@ function refreshBuild() {
     const cost = k === "astro" ? ASTRO_COST : BT[k].cost, miss = k === "astro" ? [] : unlockReqs(k).filter(r => !r[1]);
     const it = document.createElement("div"); it.className = "item" + (G.crystals < cost || miss.length ? " dis" : "") + (miss.length ? " lock" : "");
     it.innerHTML = `<img src="${k === "astro" ? astroIcon : "assets/" + BT[k].img + ".png"}"><b>${T(k === "astro" ? "astro" : k)}</b><span>💎 ${cost}</span>` + (miss.length ? `<span class="lk">${T("lock")}: ${miss.map(r => r[0]).join("، ")}</span>` : "");
+    if (G.tut === 9 && k === "tower") it.classList.add("tutPick");
     it.onclick = () => menuPick(k); row.appendChild(it);
   }
 }
 function menuPick(k) {
   if (k === "astro") {
     if (astros.length >= G.maxCrew) return toast(astros.length >= G.cap.q ? T("maxA") : T("needSup"));
+    if (G.tut <= 9) return toast(T("follow"));
     if (G.crystals < ASTRO_COST) return toast(T("noC"));
-    G.crystals -= ASTRO_COST; const c = cmd(); const a = addAstro(c.x, c.y + 110); goTo(a, c.x + (Math.random() - .5) * 160, c.y + 170); toast(T("newA")); chime(990); refreshBuild(); return;
+    G.crystals -= ASTRO_COST; const c = cmd(); const a = addAstro(c.x, c.y + 110); goTo(a, c.x + (Math.random() - .5) * 160, c.y + 170); toast(T("newA")); sfx("done"); refreshBuild(); return;
   }
   const miss = unlockReqs(k).filter(r => !r[1]); if (miss.length) return toast(T("lock") + ": " + miss.map(r => r[0]).join("، "));
   if (BT[k].one && count(k) >= BT[k].one) return toast(T("once"));
+  if (G.tut <= 9 && k !== "tower") return toast(T("follow"));
   if (G.crystals < BT[k].cost) return toast(T("noC"));
   if (buildings.some(b => !b.built)) return toast(T("busy"));
-  $("buildP").classList.remove("show"); G.paused = false;
+  $("buildP").classList.remove("show"); G.paused = false; sfx("click");
+  if (G.tut === 9) showHint(T("t9p"));
   const c = cmd(); ghost = { type: k, x: c.x + 300, y: c.y + 60 }; const sp = findSpot(k); if (sp) { ghost.x = sp.x; ghost.y = sp.y; G.focus = { x: sp.x, y: sp.y - 60, t: 1.2 }; }
-  $("place").classList.add("show"); toast(k === "water" ? T("nearW") : T("placeT"));
+  $("place").classList.add("show"); if (G.tut !== 9) toast(k === "water" ? T("nearW") : T("placeT"));
 }
 function ghostOk() {
   if (!ghost) return false; const d = BT[ghost.type], im = A[d.img], h = d.w * im.height / im.width, fy = ghost.y - h * .18;
@@ -791,12 +834,14 @@ function findSpot(type) {
 }
 $("pOk").onclick = () => {
   if (!ghostOk()) return toast(ghost.type === "water" ? T("nearW") : T("bad"));
-  G.crystals -= BT[ghost.type].cost; const b = addBuilding(ghost.type, ghost.x, ghost.y, false); startConstruction(b);
+  G.crystals -= BT[ghost.type].cost; const b = addBuilding(ghost.type, ghost.x, ghost.y, false); startConstruction(b); sfx("build");
   ghost = null; $("place").classList.remove("show");
 };
 $("pNo").onclick = () => { ghost = null; $("place").classList.remove("show"); };
 $("bHelp").onclick = () => { showHint(G.tut >= 1 && G.tut <= 10 ? T("t" + G.tut) : T("help"), 7); };
-$("bMenu").onclick = () => { G.paused = true; $("menuP").classList.add("show"); };
+$("bMenu").onclick = () => { sndLbl(); G.paused = true; $("menuP").classList.add("show"); };
+const sndLbl = () => { $("mSound").textContent = (MUTE ? "🔇 " : "🔊 ") + T(MUTE ? "sOff" : "sOn"); };
+$("mSound").onclick = () => { setMute(!MUTE); sndLbl(); if (!MUTE) sfx("select"); };
 $("mResume").onclick = () => { $("menuP").classList.remove("show"); G.paused = false; };
 $("mIntro").onclick = () => { $("menuP").classList.remove("show"); playIntro(() => { G.paused = false; }); };
 $("mNew").onclick = () => {
@@ -819,8 +864,9 @@ function tutTarget() {
 function setTut(n) {
   G.tut = n;
   if (n >= 1 && n <= 10) { showHint(T("t" + n)); const tg = tutTarget(); if (tg) G.focus = { x: tg.x, y: tg.y + 60, t: 1.2 }; }
+  if (n === 9 && G.crystals < BT.tower.cost) G.crystals = BT.tower.cost; // the tower step should never stall on crystals
   else if (n === 11) { showHint(T("tdone"), 8); G.tut = 99; localStorage.setItem("iv_tut", "1"); }
-  $("bBuild").style.display = G.tut >= 10 ? "flex" : "none";
+  $("bBuild").style.display = G.tut >= 9 ? "flex" : "none";
   chime(760);
 }
 
@@ -873,13 +919,13 @@ function update(dt) {
   if (slots && G.animals < slots) { G.breedT += dt * (has("breed") ? 2 : 1); if (G.breedT >= 45) { G.breedT = 0; if (airTot - .5 * (G.animals + 1) >= astros.length) { G.animals++; const f = buildings.find(b => b.type === "farm" && b.built); if (f) fx.push({ t: "txt", x: f.x, y: f.y - f.h * .8, s: "+1 🐐", life: 1.4 }); } } }
   if (G.meat > 0) G.meat = Math.max(0, G.meat - dt / 8);
   // research and robot production
-  for (const lab in G.rc) { const r = G.rc[lab]; if (!count(lab)) continue; if ((r[1] -= dt) <= 0) { delete G.rc[lab]; G.res.push(r[0]); chime(1400); toast(T("rFin") + RES[r[0]].n[AR ? 0 : 1]); if (r[0] === "armor") buildings.forEach(b => setLvl(b, b.lvl)); save(); } }
+  for (const lab in G.rc) { const r = G.rc[lab]; if (!count(lab)) continue; if ((r[1] -= dt) <= 0) { delete G.rc[lab]; G.res.push(r[0]); sfx("research"); toast(T("rFin") + RES[r[0]].n[AR ? 0 : 1]); if (r[0] === "armor") buildings.forEach(b => setLvl(b, b.lvl)); save(); } }
   if (resLab && G.t - (G.resRef || 0) > .5) { G.resRef = G.t; refreshRes(); }
-  if (G.robT > 0 && count("factory") && (G.robT -= dt) <= 0) { G.robT = 0; const f = buildings.find(b => b.type === "factory" && b.built); const r = addRobot(f.x, f.y + 20); r.post = null; toast(T("robNew")); chime(1100); save(); }
+  if (G.robT > 0 && count("factory") && (G.robT -= dt) <= 0) { G.robT = 0; const f = buildings.find(b => b.type === "factory" && b.built); const r = addRobot(f.x, f.y + 20); r.post = null; toast(T("robNew")); sfx("done"); save(); }
   // newly unlocked buildings
   if (G.tut > 9 && (G.unlT = (G.unlT || 0) - dt) <= 0) {
     G.unlT = 1; const now = MENU.filter(k => k !== "astro" && unlockReqs(k).every(r => r[1]));
-    if (G.unl) for (const k of now) if (!G.unl.includes(k)) { toast(T("unl") + T(k)); chime(1200); }
+    if (G.unl) for (const k of now) if (!G.unl.includes(k)) { toast(T("unl") + T(k)); sfx("research"); }
     G.unl = now;
   }
   // which building should ask for an upgrade
@@ -894,16 +940,16 @@ function update(dt) {
     if (G.need) { const cand = buildings.filter(b => b.type === G.need && b.built && b.lvl < MAX_LVL && !b.upT).sort((a, b) => a.lvl - b.lvl)[0]; G.needB = cand || null; if (!cand) G.need = null; else if (!reqsOk(cand)) { const c2 = cmd(); if (c2 && c2.lvl < MAX_LVL && !c2.upT) { G.needB = c2; G.need = "command"; } } else if (G.lastNeed !== G.need) { G.lastNeed = G.need; toast(T(G.need) + T("needUp")); } }
     else G.lastNeed = null;
   }
-  for (const b of buildings) if (b.upT > 0 && (b.upT -= dt) <= 0) { b.upT = 0; setLvl(b, b.lvl + 1); chime(1300); toast(T(b.type) + " · " + T("upgDone")); fx.push({ t: "boom", x: b.x, y: b.y - b.h * .45, life: .6 }); }
+  for (const b of buildings) if (b.upT > 0 && (b.upT -= dt) <= 0) { b.upT = 0; setLvl(b, b.lvl + 1); sfx("upgrade"); toast(T(b.type) + " · " + T("upgDone")); fx.push({ t: "boom", x: b.x, y: b.y - b.h * .45, life: .6 }); }
   // day / night cycle (the first day waits for the tutorial)
   const dayLen = G.day === 1 && G.tut <= 9 ? 1e9 : DAY_LEN;
   if (G.phase === "day" && G.phaseT >= dayLen) {
-    G.phase = "night"; G.phaseT = 0; spawnWave(); toast(T("nightC")); chime(330); G.lowWarn = false;
+    G.phase = "night"; G.phaseT = 0; spawnWave(); toast(T("nightC")); sfx("alarm"); setTimeout(() => sfx("roar", .7), 1600); G.lowWarn = false;
     if (G.tut === 10) setTimeout(() => setTut(11), 9000);
   } else if (G.phase === "night" && G.phaseT >= NIGHT_LEN) {
     G.phase = "day"; G.phaseT = 0; beasts.forEach(b => b.flee = true);
     if (G.day >= WIN_NIGHTS && !G.won) { G.won = true; G.day++; save(); victory(); return; }
-    G.day++; save(); toast(T("dawn")); chime(880);
+    G.day++; save(); toast(T("dawn")); sfx("dawn");
   }
   if (night && G.power.k < 1 && count("tower") && !G.lowWarn) { G.lowWarn = true; toast(T("lowP")); }
   // tutorial progress
@@ -924,7 +970,7 @@ function update(dt) {
     const v = curV, dur = bvOk && v && v.duration ? v.duration : 7;
     b.prog = clamp(bvOk && v ? v.currentTime / dur : b.prog + dt / 7, 0, 1);
     if (b.prog >= .97 || (bvOk && v && v.ended)) {
-      b.built = true; chime(1200);
+      b.built = true; sfx("done");
       if (b.type === "quarters") { const c = cmd(); if (c && astros.length < 3 + 4 * count("quarters")) { const a = addAstro(b.x, b.y + 30); goTo(a, b.x + 40, b.y + 90); toast(T("newA")); } }
     }
   } else if (b.fade < 1) b.fade = Math.min(1, b.fade + dt / .45);
@@ -943,7 +989,7 @@ function update(dt) {
     }
     if (j && !a.path) {
       if (j.back) { // deliver
-        if (c && Math.hypot(a.x - c.x, a.y - (c.y + 30)) < 200) { G.crystals += a.carry; a.carry = 0; j.back = false; fx.push({ t: "txt", x: a.x, y: a.y - 70, s: "+10 💎", life: 1.2 }); if (j.dep.amt > 0) goTo(a, j.dep.x, j.dep.y + 26); else a.job = null; }
+        if (c && Math.hypot(a.x - c.x, a.y - (c.y + 30)) < 200) { G.crystals += a.carry; a.carry = 0; j.back = false; sfx("coin", .6); fx.push({ t: "txt", x: a.x, y: a.y - 70, s: "+10 💎", life: 1.2 }); if (j.dep.amt > 0) goTo(a, j.dep.x, j.dep.y + 26); else a.job = null; }
         else if (c) goTo(a, c.x, c.y + 130);
       } else if (j.dep.amt <= 0) a.job = null;
       else if (Math.hypot(a.x - j.dep.x, a.y - j.dep.y) < 80) { a.mineT += dt; if (a.mineT > 2.4) { a.mineT = 0; const take = Math.min(10, j.dep.amt); j.dep.amt -= take; a.carry = take; j.back = true; if (c) goTo(a, c.x + (Math.random() - .5) * 120, c.y + 130); } }
@@ -991,7 +1037,7 @@ function update(dt) {
     if (b.type !== "tower" || !b.built) continue;
     const rng2 = towerRange(b); let tg = b.aim;
     if (!tg || tg.hp <= 0 || tg.flee || dist(tg, b) > rng2) { tg = null; let bd = rng2; for (const e of beasts) { if (e.flee) continue; const k = dist(e, b); if (k < bd) { bd = k; tg = e; } } if (tg && tg !== b.aim) zap(); b.aim = tg; }
-    if (tg) { tg.hp -= towerDps(b) * G.power.k * dt; lasers.push([b.x - b.w * .22, b.y - b.h * .78, tg.x, tg.y - 30, G.power.k]); if (tg.hp <= 0) { fx.push({ t: "boom", x: tg.x, y: tg.y - 30, life: .6 }); G.crystals += 5; fx.push({ t: "txt", x: tg.x, y: tg.y - 60, s: "+5 💎", life: 1 }); } }
+    if (tg) { tg.hp -= towerDps(b) * G.power.k * dt; lasers.push([b.x - b.w * .22, b.y - b.h * .78, tg.x, tg.y - 30, G.power.k]); if (tg.hp <= 0) { sfx("boom", .5); fx.push({ t: "boom", x: tg.x, y: tg.y - 30, life: .6 }); G.crystals += 5; fx.push({ t: "txt", x: tg.x, y: tg.y - 60, s: "+5 💎", life: 1 }); } }
   }
   // defense robots: guard their post, chase creatures that come close
   robots.forEach((r, i) => {
@@ -1002,14 +1048,14 @@ function update(dt) {
     if (tg && gd < 200) {
       r.path = null; r.moving = false; r.dir = "side"; r.flip = tg.x < r.x;
       tg.hp -= 20 * (has("laser2") ? 1.25 : 1) * G.power.k * dt; lasers.push([r.x + (r.flip ? -16 : 16), r.y - 40, tg.x, tg.y - 30, G.power.k]);
-      if (tg.hp <= 0 && !tg.killed) { tg.killed = true; fx.push({ t: "boom", x: tg.x, y: tg.y - 30, life: .6 }); G.crystals += 5; fx.push({ t: "txt", x: tg.x, y: tg.y - 60, s: "+5 💎", life: 1 }); }
+      if (tg.hp <= 0 && !tg.killed) { tg.killed = true; sfx("boom", .5); fx.push({ t: "boom", x: tg.x, y: tg.y - 30, life: .6 }); G.crystals += 5; fx.push({ t: "txt", x: tg.x, y: tg.y - 60, s: "+5 💎", life: 1 }); }
     } else if (gd > 24) { if ((r.repath -= dt) <= 0 || !r.path) { r.repath = 1.2; r.path = findPath(r.x, r.y, goal.x, goal.y, false); } r.moving = followPath(r, 70, dt); if (r.moving) r.anim += dt * 12; }
     else { r.moving = false; r.dir = "front"; }
     if (!night && r.hp < r.max) r.hp = Math.min(r.max, r.hp + 3 * dt);
   });
-  robots = robots.filter(r => { if (r.hp > 0) return true; fx.push({ t: "boom", x: r.x, y: r.y - 30, life: 1, big: true }); toast(T("robLost")); return false; });
+  robots = robots.filter(r => { if (r.hp > 0) return true; sfx("boom"); fx.push({ t: "boom", x: r.x, y: r.y - 30, life: 1, big: true }); toast(T("robLost")); return false; });
   // buildings destroyed
-  for (const b of buildings) if (b.hp <= 0 && !b.dead) { b.dead = true; markOcc(b.x, footY(b), b.r, 0); fx.push({ t: "boom", x: b.x, y: b.y - b.h * .4, life: 1, big: true }); if (b.type === "command") lose(); }
+  for (const b of buildings) if (b.hp <= 0 && !b.dead) { b.dead = true; sfx("boom"); markOcc(b.x, footY(b), b.r, 0); fx.push({ t: "boom", x: b.x, y: b.y - b.h * .4, life: 1, big: true }); if (b.type === "command") lose(); }
   buildings = buildings.filter(b => !b.dead);
   fx = fx.filter(f => (f.life -= dt) > 0);
   if (toastT > 0 && (toastT -= dt) <= 0) $("toast").style.display = "none";
@@ -1018,8 +1064,8 @@ function update(dt) {
 function catchDeer(d) {
   deer = deer.filter(o => o !== d); zap();
   if (has("capture") && G.animals < G.cap.slots) { G.animals++; fx.push({ t: "txt", x: d.x, y: d.y - 60, s: T("capt"), life: 1.5 }); fx.push({ t: "ring", x: d.x, y: d.y, c: "#fd6", life: .8 }); }
-  else { G.meat += 30; fx.push({ t: "txt", x: d.x, y: d.y - 60, s: T("meat"), life: 1.5 }); fx.push({ t: "boom", x: d.x, y: d.y - 30, life: .6 }); }
-  chime(1000);
+  else { sfx("boom", .4); G.meat += 30; fx.push({ t: "txt", x: d.x, y: d.y - 60, s: T("meat"), life: 1.5 }); fx.push({ t: "boom", x: d.x, y: d.y - 30, life: .6 }); }
+  sfx("coin");
 }
 function hurt(t, dmg) { t.hp -= dmg; if (t.kind === "a" && t.hp <= 0) { t.downT = 15; t.sel = false; t.job = null; t.carry = 0; t.path = null; toast(T("down")); updSelBtn(); } }
 function followPath(u, speed, dt) {
@@ -1176,9 +1222,13 @@ function hud() {
   $("life").style.display = cmd() && G.tut > 4 ? "" : "none";
   if (C.o != null) $("life").innerHTML = `<span style="${col(C.o)}">🫧${C.o}</span> <span style="${col(C.g)}">🥬${C.g}</span> <span style="${col(C.p)}">🍖${C.p}</span>` + (C.slots ? ` <span>🐐${G.animals}/${C.slots}</span>` : "");
   $("pow").textContent = "⚡ " + Math.round(G.power.prod) + "/" + G.power.use; $("pow").style.color = G.power.k < 1 ? "#f86" : "";
+  $("hint").style.marginBottom = ghost ? "84px" : "";
   // tutorial hand pointer
-  const hand = $("hand"), tg = (!G.paused && G.tut >= 1 && G.tut <= 9) ? tutTarget() : null;
-  if (tg) { const s = toScreen(tg.x, tg.y); hand.style.display = "block"; hand.style.left = (s.x - 18) + "px"; hand.style.top = (s.y - 10) + "px"; } else hand.style.display = "none";
+  const hand = $("hand"); let tg = (!G.paused && G.tut >= 1 && G.tut <= 8) ? tutTarget() : null;
+  if (G.tut === 9 && !buildings.some(b => !b.built)) {
+    const el = ghost ? $("pOk") : $("buildP").classList.contains("show") ? document.querySelector(".tutPick") : !G.paused ? $("bBuild") : null;
+    if (el) { const r = el.getBoundingClientRect(); hand.style.display = "block"; hand.style.left = (r.left + r.width / 2 - 18) + "px"; hand.style.top = (r.top + r.height * .55) + "px"; } else hand.style.display = "none";
+  } else if (tg) { const s = toScreen(tg.x, tg.y); hand.style.display = "block"; hand.style.left = (s.x - 18) + "px"; hand.style.top = (s.y - 10) + "px"; } else hand.style.display = "none";
   const left = G.phase === "day" ? (G.day === 1 && G.tut <= 9 ? null : DAY_LEN - G.phaseT) : NIGHT_LEN - G.phaseT;
   const tm = left == null ? "" : " · " + Math.max(0, Math.ceil(left)) + "s";
   $("clock").textContent = (G.phase === "day" ? "☀️ " + T("day") + " " + G.day : "🌙 " + T("night") + " " + G.day) + tm;
