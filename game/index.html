@@ -143,7 +143,7 @@ const TX = {
   d_greenhouse: ["تزرع الأكل للطاقم. كل صوبة تكفي 5 رواد.", "Grows food for the crew. Each one feeds 5 astronauts."],
   d_quarters: ["تزيد عدد الرواد 4، وينضم رائد جديد فوراً.", "Room for 4 more astronauts; one joins right away."],
   d_tower: ["يضرب الكائنات تلقائياً ويحتاج طاقة.", "Fires at creatures automatically; needs power."],
-  lvl: ["المستوى", "Level"], time: ["الوقت", "Time"], cost: ["التكلفة", "Cost"], now: ["⚡ أنهِ فوراً", "⚡ Finish now"], soon: ["الإنهاء الفوري سيتوفر قريباً", "Instant finish is coming soon"],
+  lvl: ["المستوى", "Level"], req: ["يتطلب", "Requires"], reqMiss: ["الشروط لم تكتمل بعد ✖", "Requirements not met yet ✖"], time: ["الوقت", "Time"], cost: ["التكلفة", "Cost"], now: ["⚡ أنهِ فوراً", "⚡ Finish now"], soon: ["الإنهاء الفوري سيتوفر قريباً", "Instant finish is coming soon"],
   s_power: ["إنتاج الطاقة", "Power output"], s_air: ["هواء يكفي (رواد)", "Air for (astronauts)"], s_food: ["أكل يكفي (رواد)", "Food for (astronauts)"], s_rooms: ["سكن يكفي (رواد)", "Rooms for (astronauts)"],
   s_dmg: ["قوة الليزر", "Laser damage"], s_range: ["المدى", "Range"], s_hp: ["التحمّل", "Durability"], left: ["متبقي", "Left"], upg: ["⬆ تحديث", "⬆ Upgrade"], maxL: ["أعلى مستوى ✔", "Max level ✔"], upgDone: ["تم التحديث ⬆", "Upgrade complete ⬆"],
   needUp: [" يحتاج تحديث ⬆ اضغط عليه", " needs an upgrade ⬆ tap it"], upgBusy: ["جاري التحديث...", "Upgrading..."],
@@ -411,10 +411,20 @@ function addBuilding(type, x, y, built) {
   const b = { kind: "b", type, x, y, w: d.w, h: d.w * im.height / im.width, hp: d.hp, max: d.hp, r: d.r, built: !!built, prog: built ? 1 : 0, fade: built ? 1 : 0, aim: null, lvl: 1, upT: 0 };
   buildings.push(b); markOcc(x, footY(b), d.r, 1); return b;
 }
-const MAX_LVL = 3;
+const MAX_LVL = 5;
 const sumLvl = t => buildings.reduce((n, b) => n + (b.type === t && b.built ? b.lvl : 0), 0);
 const upCost = b => Math.round(Math.max(BT[b.type].cost, 80) * 1.2 * b.lvl);
-const upTime = b => b.lvl === 1 ? 180 : 240;
+const upTime = b => 180 * b.lvl; // 3, 6, 9, 12 minutes
+// what must be true before this building can go up a level
+function upReqs(b) {
+  const out = [], next = b.lvl + 1, c = buildings.find(o => o.type === "command" && o.built);
+  if (b.type !== "command") { if (!c || c.lvl < next) out.push([T("command") + " " + T("lvl") + " " + next, false]); return out; }
+  const best = t => buildings.reduce((m, o) => o.type === t && o.built ? Math.max(m, o.lvl) : m, 0);
+  const need = { 2: [["quarters", 1], ["tower", 1]], 3: [["power", 2], ["oxygen", 2], ["greenhouse", 2]], 4: [["power", 3], ["quarters", 3], ["tower", 3]], 5: [["power", 4], ["oxygen", 4], ["greenhouse", 4], ["tower", 4]] }[next] || [];
+  for (const [t, l] of need) out.push([T(t) + " " + T("lvl") + " " + l, best(t) >= l]);
+  return out;
+}
+const reqsOk = b => upReqs(b).every(r => r[1]);
 const fmt = s => Math.floor(s / 60) + ":" + String(Math.floor(s % 60)).padStart(2, "0");
 function setLvl(b, l) { b.lvl = l; const k = 1 + .5 * (l - 1), f = b.hp / b.max; b.max = Math.round(BT[b.type].hp * k); b.hp = Math.round(b.max * f); }
 const towerDps = b => BT.tower.dps * (1 + .5 * (b.lvl - 1)), towerRange = b => BT.tower.range + 45 * (b.lvl - 1);
@@ -532,12 +542,12 @@ function statLine(b, l) {
   return T("st_command") + " · ❤ " + Math.round(BT.command.hp * (1 + .5 * (l - 1)));
 }
 function statsOf(type, l) {
-  const k = 1 + .5 * (l - 1), hp = ["❤", T("s_hp"), Math.round(BT[type].hp * k), Math.round(BT[type].hp * 2)];
-  if (type === "power") return [["⚡", T("s_power"), 30 * l, 90], hp];
-  if (type === "oxygen") return [["🫧", T("s_air"), 5 * l, 15], hp];
-  if (type === "greenhouse") return [["🥬", T("s_food"), 5 * l, 15], hp];
-  if (type === "quarters") return [["🛏️", T("s_rooms"), 4 * l, 12], hp];
-  if (type === "tower") return [["🔫", T("s_dmg"), Math.round(BT.tower.dps * k), Math.round(BT.tower.dps * 2)], ["📡", T("s_range"), BT.tower.range + 45 * (l - 1), BT.tower.range + 90], hp];
+  const M = MAX_LVL, k = 1 + .5 * (l - 1), kM = 1 + .5 * (M - 1), hp = ["❤", T("s_hp"), Math.round(BT[type].hp * k), Math.round(BT[type].hp * kM)];
+  if (type === "power") return [["⚡", T("s_power"), 30 * l, 30 * M], hp];
+  if (type === "oxygen") return [["🫧", T("s_air"), 5 * l, 5 * M], hp];
+  if (type === "greenhouse") return [["🥬", T("s_food"), 5 * l, 5 * M], hp];
+  if (type === "quarters") return [["🛏️", T("s_rooms"), 4 * l, 4 * M], hp];
+  if (type === "tower") return [["🔫", T("s_dmg"), Math.round(BT.tower.dps * k), Math.round(BT.tower.dps * kM)], ["📡", T("s_range"), BT.tower.range + 45 * (l - 1), BT.tower.range + 45 * (M - 1)], hp];
   return [hp];
 }
 function openBuilding(b) {
@@ -556,9 +566,10 @@ function refreshUp() {
     $("upProg").innerHTML = `<div class="st"><div class="lb"><span>⏱ ${T("upgBusy")}</span><span>${T("left")} ${fmt(b.upT)}</span></div><div class="bar"><div class="cur" style="width:${k * 100}%"></div></div></div>`;
     $("upCost").innerHTML = ""; $("upGo").style.display = "none"; $("upNow").style.display = "";
   } else {
-    $("upProg").innerHTML = "";
+    const rq = maxed ? [] : upReqs(b);
+    $("upProg").innerHTML = rq.length ? `<div style="font-size:14px;font-weight:700;margin-bottom:4px">${T("req")}: ${rq.map(r => `<span style="color:${r[1] ? "#7f9" : "#ff7a6a"};margin-inline-end:10px">${r[1] ? "✔" : "✖"} ${r[0]}</span>`).join("")}</div>` : "";
     $("upCost").innerHTML = maxed ? "" : `<span class="${G.crystals < cost ? "bad" : ""}">💎 ${cost}</span><span>⏱ ${fmt(upTime(b))}</span>`;
-    $("upGo").style.display = ""; $("upGo").textContent = maxed ? T("maxL") : T("upg"); $("upGo").classList.toggle("dim", maxed || G.crystals < cost);
+    $("upGo").style.display = ""; $("upGo").textContent = maxed ? T("maxL") : T("upg"); $("upGo").classList.toggle("dim", maxed || G.crystals < cost || !reqsOk(b));
     $("upNow").style.display = "none";
   }
   $("upNow").textContent = T("now");
@@ -566,6 +577,7 @@ function refreshUp() {
 $("upNo").onclick = () => { $("upP").classList.remove("show"); bldSel = null; };
 $("upGo").onclick = () => {
   const b = bldSel; if (!b || b.lvl >= MAX_LVL || b.upT > 0) return;
+  if (!reqsOk(b)) return toast(T("reqMiss"));
   if (G.crystals < upCost(b)) return toast(T("noC"));
   G.crystals -= upCost(b); b.upDur = b.upT = upTime(b); chime(700); refreshUp();
 };
@@ -695,7 +707,7 @@ function update(dt) {
     const crew = astros.length, lim = [["quarters", capQ], ["oxygen", capO], ["greenhouse", capG]].sort((a, b) => a[1] - b[1])[0];
     if (G.power.use > G.power.prod / (night ? .5 : 1) * .9) G.need = "power";
     else if (crew >= G.maxCrew - 1) G.need = lim[0];
-    if (G.need) { const cand = buildings.filter(b => b.type === G.need && b.built && b.lvl < MAX_LVL).sort((a, b) => a.lvl - b.lvl)[0]; G.needB = cand || null; if (!cand) G.need = null; else if (G.lastNeed !== G.need) { G.lastNeed = G.need; toast(T(G.need) + T("needUp")); } }
+    if (G.need) { const cand = buildings.filter(b => b.type === G.need && b.built && b.lvl < MAX_LVL && !b.upT).sort((a, b) => a.lvl - b.lvl)[0]; G.needB = cand || null; if (!cand) G.need = null; else if (!reqsOk(cand)) { const c2 = cmd(); if (c2 && c2.lvl < MAX_LVL && !c2.upT) { G.needB = c2; G.need = "command"; } } else if (G.lastNeed !== G.need) { G.lastNeed = G.need; toast(T(G.need) + T("needUp")); } }
     else G.lastNeed = null;
   }
   for (const b of buildings) if (b.upT > 0 && (b.upT -= dt) <= 0) { b.upT = 0; setLvl(b, b.lvl + 1); chime(1300); toast(T(b.type) + " · " + T("upgDone")); fx.push({ t: "boom", x: b.x, y: b.y - b.h * .45, life: .6 }); }
