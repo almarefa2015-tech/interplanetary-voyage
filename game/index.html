@@ -44,6 +44,32 @@ html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:syste
 #sub{position:absolute;bottom:8%;left:0;right:0;text-align:center;font-size:clamp(16px,3vw,28px);font-weight:700;text-shadow:0 2px 6px #000;padding:0 10%}
 #place{position:fixed;z-index:6;bottom:max(14px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);display:none;gap:12px}
 #place.show{display:flex}
+#upP .card{width:min(94vw,620px);padding:0;overflow:hidden;text-align:start;background:linear-gradient(165deg,#0f3448 0%,#082030 45%,#04121c 100%);border:1px solid rgba(110,240,255,.65);box-shadow:0 0 0 1px rgba(0,0,0,.6),0 0 40px rgba(0,210,255,.35),inset 0 1px 0 rgba(255,255,255,.18)}
+.upHead{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:linear-gradient(180deg,rgba(80,220,255,.28),rgba(80,220,255,.05));border-bottom:1px solid rgba(110,240,255,.35)}
+.upHead b{font-size:20px;color:#bff6ff;text-shadow:0 0 10px rgba(0,220,255,.6)}
+.upLv{display:flex;align-items:center;gap:8px;font-weight:800;font-size:16px}
+.upLv .lv{background:linear-gradient(180deg,#1b5c75,#0b2c3c);border:1px solid #6ef;border-radius:10px;padding:2px 10px}
+.upLv .nx{background:linear-gradient(180deg,#2fb06a,#136b3c);border-color:#7f9}
+.upBody{display:flex;gap:14px;padding:12px 16px}
+.upPic{flex:0 0 38%;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 60%,rgba(70,220,255,.35),rgba(0,0,0,0) 65%);border-radius:14px}
+.upPic img{width:100%;max-height:150px;object-fit:contain;filter:drop-shadow(0 8px 14px rgba(0,0,0,.7)) drop-shadow(0 0 12px rgba(0,220,255,.35))}
+.upStats{flex:1;display:flex;flex-direction:column;gap:9px;justify-content:center}
+.st .lb{display:flex;justify-content:space-between;font-size:14px;font-weight:700;margin-bottom:3px}
+.st .lb i{font-style:normal;color:#7f9}
+.st .bar{position:relative;height:13px;border-radius:7px;background:rgba(0,0,0,.55);box-shadow:inset 0 2px 4px rgba(0,0,0,.8);overflow:hidden}
+.st .bar .cur{position:absolute;inset:0 auto 0 0;background:linear-gradient(180deg,#7ef3ff,#139fc2);box-shadow:0 0 8px rgba(0,220,255,.7)}
+.st .bar .nxt{position:absolute;top:0;bottom:0;background:repeating-linear-gradient(135deg,rgba(120,255,160,.85) 0 6px,rgba(60,200,110,.85) 6px 12px);animation:shim 1s linear infinite}
+[dir=rtl] .st .bar .cur{inset:0 0 0 auto}
+@keyframes shim{to{background-position:24px 0}}
+.upFoot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 16px 14px;border-top:1px solid rgba(110,240,255,.2);flex-wrap:wrap}
+.upCost{display:flex;gap:14px;font-weight:800;font-size:16px}
+.upCost .bad{color:#ff7a6a}
+.upBtns{display:flex;gap:8px}
+.big.gold{background:linear-gradient(180deg,#ffd76a,#d18a12);color:#2a1600;box-shadow:0 0 14px rgba(255,200,80,.5)}
+.big.dim{opacity:.5}
+.upProg{padding:0 16px 6px}
+.upProg .bar{height:16px}
+.upProg .cur{background:linear-gradient(180deg,#ffe58a,#d99a1a)!important}
 #hand{position:fixed;z-index:7;font-size:46px;pointer-events:none;display:none;filter:drop-shadow(0 0 10px #4ef);animation:bob .8s ease-in-out infinite alternate;transform-origin:50% 0}
 @keyframes bob{from{margin-top:0}to{margin-top:16px}}
 #loading{position:fixed;inset:0;z-index:50;background:#000;display:flex;align-items:center;justify-content:center;font-size:18px;color:#7ff0ff}
@@ -77,6 +103,12 @@ html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:syste
   <div class="row"><div class="big" id="wGo"></div><div class="big alt" id="wNo" data-t="close"></div></div>
 </div></div>
 <div id="hand">👆</div>
+<div class="panel" id="upP"><div class="card">
+  <div class="upHead"><b id="upName"></b><div class="upLv"><span class="lv" id="upL1"></span><span>➜</span><span class="lv nx" id="upL2"></span></div></div>
+  <div class="upBody"><div class="upPic"><img id="upImg"></div><div class="upStats" id="upStats"></div></div>
+  <div class="upProg" id="upProg"></div>
+  <div class="upFoot"><div class="upCost" id="upCost"></div><div class="upBtns"><div class="big" id="upGo"></div><div class="big gold" id="upNow"></div><div class="big alt" id="upNo" data-t="close"></div></div></div>
+</div></div>
 
 <div class="panel" id="menuP"><div class="card">
   <h2>Interplanetary Voyage</h2>
@@ -111,7 +143,9 @@ const TX = {
   d_greenhouse: ["تزرع الأكل للطاقم. كل صوبة تكفي 5 رواد.", "Grows food for the crew. Each one feeds 5 astronauts."],
   d_quarters: ["تزيد عدد الرواد 4، وينضم رائد جديد فوراً.", "Room for 4 more astronauts; one joins right away."],
   d_tower: ["يضرب الكائنات تلقائياً ويحتاج طاقة.", "Fires at creatures automatically; needs power."],
-  lvl: ["المستوى", "Level"], upg: ["⬆ تحديث", "⬆ Upgrade"], maxL: ["أعلى مستوى ✔", "Max level ✔"], upgDone: ["تم التحديث ⬆", "Upgrade complete ⬆"],
+  lvl: ["المستوى", "Level"], time: ["الوقت", "Time"], cost: ["التكلفة", "Cost"], now: ["⚡ أنهِ فوراً", "⚡ Finish now"], soon: ["الإنهاء الفوري سيتوفر قريباً", "Instant finish is coming soon"],
+  s_power: ["إنتاج الطاقة", "Power output"], s_air: ["هواء يكفي (رواد)", "Air for (astronauts)"], s_food: ["أكل يكفي (رواد)", "Food for (astronauts)"], s_rooms: ["سكن يكفي (رواد)", "Rooms for (astronauts)"],
+  s_dmg: ["قوة الليزر", "Laser damage"], s_range: ["المدى", "Range"], s_hp: ["التحمّل", "Durability"], left: ["متبقي", "Left"], upg: ["⬆ تحديث", "⬆ Upgrade"], maxL: ["أعلى مستوى ✔", "Max level ✔"], upgDone: ["تم التحديث ⬆", "Upgrade complete ⬆"],
   needUp: [" يحتاج تحديث ⬆ اضغط عليه", " needs an upgrade ⬆ tap it"], upgBusy: ["جاري التحديث...", "Upgrading..."],
   st_command: ["تحمّل أعلى للهجوم", "Tougher against attacks"], st_power: ["طاقة", "power"], st_oxygen: ["هواء يكفي", "air for"], st_greenhouse: ["أكل يكفي", "food for"],
   st_quarters: ["سكن يكفي", "room for"], st_tower: ["قوة الليزر", "laser power"], st_crew: ["رواد", "astronauts"],
@@ -380,6 +414,8 @@ function addBuilding(type, x, y, built) {
 const MAX_LVL = 3;
 const sumLvl = t => buildings.reduce((n, b) => n + (b.type === t && b.built ? b.lvl : 0), 0);
 const upCost = b => Math.round(Math.max(BT[b.type].cost, 80) * 1.2 * b.lvl);
+const upTime = b => b.lvl === 1 ? 180 : 240;
+const fmt = s => Math.floor(s / 60) + ":" + String(Math.floor(s % 60)).padStart(2, "0");
 function setLvl(b, l) { b.lvl = l; const k = 1 + .5 * (l - 1), f = b.hp / b.max; b.max = Math.round(BT[b.type].hp * k); b.hp = Math.round(b.max * f); }
 const towerDps = b => BT.tower.dps * (1 + .5 * (b.lvl - 1)), towerRange = b => BT.tower.range + 45 * (b.lvl - 1);
 function addAstro(x, y) { const a = { kind: "a", x, y, hp: 60, max: 60, path: null, job: null, carry: 0, mineT: 0, dir: "front", flip: false, anim: Math.random() * 12, moving: false, sel: false, downT: 0 }; astros.push(a); return a; }
@@ -422,7 +458,7 @@ function scatter(r) {
 function save() {
   const s = {
     v: 2, seed, day: G.day, crystals: G.crystals, tut: G.tut,
-    b: buildings.filter(b => b.built).map(b => [b.type, b.x | 0, b.y | 0, b.hp | 0, b.lvl]),
+    b: buildings.filter(b => b.built).map(b => [b.type, b.x | 0, b.y | 0, b.hp | 0, b.lvl, Math.ceil(b.upT || 0), b.upDur || 0]),
     w: wrecks.map(w => [w.type, w.x | 0, w.y | 0]),
     a: astros.length, d: deposits.map(d => [d.x | 0, d.y | 0, d.amt | 0]), p: props.map(p => [p.type, p.x | 0, p.y | 0, +p.s.toFixed(2), p.flip ? 1 : 0])
   };
@@ -434,7 +470,7 @@ function load() {
   genWorld(s.seed);
   buildings = []; astros = []; beasts = []; fx = []; lasers = []; wrecks = [];
   for (const [t, x, y] of s.w) addWreck(t, x, y);
-  for (const [t, x, y, hp, lv] of s.b) { const b = addBuilding(t, x, y, true); setLvl(b, lv || 1); b.hp = Math.min(hp, b.max); }
+  for (const [t, x, y, hp, lv, ut, ud] of s.b) { const b = addBuilding(t, x, y, true); setLvl(b, lv || 1); b.hp = Math.min(hp, b.max); if (ut > 0) { b.upT = ut; b.upDur = ud || ut; } }
   deposits = s.d.map(([x, y, amt]) => { markOcc(x, y, 30, 1); return { kind: "d", x, y, amt, max: 250 }; });
   props = s.p.map(([type, x, y, sc, f]) => { markOcc(x, y, type === "tree" ? 22 : 26, 1); return { kind: "p", type, x, y, s: sc, flip: !!f }; });
   const c = cmd() || { x: WORLD / 2, y: WORLD / 2 + 60 };
@@ -495,13 +531,45 @@ function statLine(b, l) {
   if (t === "tower") return T("st_tower") + " " + Math.round(BT.tower.dps * (1 + .5 * (l - 1))) + " · ↔ " + (BT.tower.range + 45 * (l - 1));
   return T("st_command") + " · ❤ " + Math.round(BT.command.hp * (1 + .5 * (l - 1)));
 }
-function openBuilding(b) {
-  bldSel = b; wreckSel = null; const d = BT[b.type];
-  $("wImg").src = "assets/" + d.img + ".png"; $("wName").textContent = T(b.type) + " · " + T("lvl") + " " + b.lvl;
-  $("wDesc").textContent = statLine(b, b.lvl) + (b.lvl < MAX_LVL ? "  →  " + statLine(b, b.lvl + 1) : "");
-  $("wGo").textContent = b.upT > 0 ? T("upgBusy") : b.lvl >= MAX_LVL ? T("maxL") : T("upg") + " · 💎 " + upCost(b);
-  G.paused = true; $("wreckP").classList.add("show");
+function statsOf(type, l) {
+  const k = 1 + .5 * (l - 1), hp = ["❤", T("s_hp"), Math.round(BT[type].hp * k), Math.round(BT[type].hp * 2)];
+  if (type === "power") return [["⚡", T("s_power"), 30 * l, 90], hp];
+  if (type === "oxygen") return [["🫧", T("s_air"), 5 * l, 15], hp];
+  if (type === "greenhouse") return [["🥬", T("s_food"), 5 * l, 15], hp];
+  if (type === "quarters") return [["🛏️", T("s_rooms"), 4 * l, 12], hp];
+  if (type === "tower") return [["🔫", T("s_dmg"), Math.round(BT.tower.dps * k), Math.round(BT.tower.dps * 2)], ["📡", T("s_range"), BT.tower.range + 45 * (l - 1), BT.tower.range + 90], hp];
+  return [hp];
 }
+function openBuilding(b) {
+  bldSel = b; wreckSel = null; const d = BT[b.type], maxed = b.lvl >= MAX_LVL;
+  $("upImg").src = "assets/" + d.img + ".png"; $("upName").textContent = T(b.type);
+  $("upL1").textContent = T("lvl") + " " + b.lvl; $("upL2").textContent = maxed ? "MAX" : T("lvl") + " " + (b.lvl + 1); $("upL2").style.display = maxed ? "none" : "";
+  const cur = statsOf(b.type, b.lvl), nxt = maxed ? cur : statsOf(b.type, b.lvl + 1), side = AR ? "right" : "left";
+  $("upStats").innerHTML = cur.map((r, i) => { const n = nxt[i], c = r[2] / r[3] * 100, g = (n[2] - r[2]) / r[3] * 100;
+    return `<div class="st"><div class="lb"><span>${r[0]} ${r[1]}</span><span>${r[2]}${g > 0 ? ` <i>+${n[2] - r[2]}</i>` : ""}</span></div><div class="bar"><div class="cur" style="width:${c}%"></div>${g > 0 ? `<div class="nxt" style="${side}:${c}%;width:${g}%"></div>` : ""}</div></div>`; }).join("");
+  refreshUp(); $("upP").classList.add("show");
+}
+function refreshUp() {
+  const b = bldSel; if (!b) return; const maxed = b.lvl >= MAX_LVL, cost = upCost(b);
+  if (b.upT > 0) {
+    const k = 1 - b.upT / b.upDur;
+    $("upProg").innerHTML = `<div class="st"><div class="lb"><span>⏱ ${T("upgBusy")}</span><span>${T("left")} ${fmt(b.upT)}</span></div><div class="bar"><div class="cur" style="width:${k * 100}%"></div></div></div>`;
+    $("upCost").innerHTML = ""; $("upGo").style.display = "none"; $("upNow").style.display = "";
+  } else {
+    $("upProg").innerHTML = "";
+    $("upCost").innerHTML = maxed ? "" : `<span class="${G.crystals < cost ? "bad" : ""}">💎 ${cost}</span><span>⏱ ${fmt(upTime(b))}</span>`;
+    $("upGo").style.display = ""; $("upGo").textContent = maxed ? T("maxL") : T("upg"); $("upGo").classList.toggle("dim", maxed || G.crystals < cost);
+    $("upNow").style.display = "none";
+  }
+  $("upNow").textContent = T("now");
+}
+$("upNo").onclick = () => { $("upP").classList.remove("show"); bldSel = null; };
+$("upGo").onclick = () => {
+  const b = bldSel; if (!b || b.lvl >= MAX_LVL || b.upT > 0) return;
+  if (G.crystals < upCost(b)) return toast(T("noC"));
+  G.crystals -= upCost(b); b.upDur = b.upT = upTime(b); chime(700); refreshUp();
+};
+$("upNow").onclick = () => toast(T("soon"));
 function openWreck(w) {
   if (G.tut <= 9 && TUT_WRECK[G.tut] !== w.type) return toast(T("follow"));
   wreckSel = w; bldSel = null; const d = BT[w.type];
@@ -511,12 +579,6 @@ function openWreck(w) {
 }
 $("wNo").onclick = () => { $("wreckP").classList.remove("show"); G.paused = false; wreckSel = null; bldSel = null; };
 $("wGo").onclick = () => {
-  if (bldSel) {
-    const b = bldSel; if (b.lvl >= MAX_LVL || b.upT > 0) return;
-    if (G.crystals < upCost(b)) return toast(T("noC"));
-    G.crystals -= upCost(b); b.upT = 4; chime(700);
-    $("wreckP").classList.remove("show"); G.paused = false; bldSel = null; return;
-  }
   const w = wreckSel, d = BT[w.type];
   if (G.crystals < d.cost) return toast(T("noC"));
   if (buildings.some(b => !b.built)) return toast(T("busy"));
@@ -782,7 +844,7 @@ function draw() {
       if (!o.built) bar(o.x, o.y + 8, 80, o.prog, "#3cf");
       if (o.hp < o.max) bar(o.x, o.y - o.h - 8, o.type === "command" ? 140 : 70, o.hp / o.max, o.hp / o.max > .4 ? "#4f8" : "#f54");
       if (o.built && o.lvl > 1) { ctx.font = "bold 16px system-ui,sans-serif"; ctx.textAlign = "center"; ctx.fillStyle = "#ffd76a"; ctx.strokeStyle = "rgba(0,0,0,.7)"; ctx.lineWidth = 3; const txt = "▲".repeat(o.lvl - 1); ctx.strokeText(txt, o.x, o.y - o.h - 14); ctx.fillText(txt, o.x, o.y - o.h - 14); }
-      if (o.upT > 0) { const k = 1 - o.upT / 4; ctx.save(); ctx.globalCompositeOperation = "lighter"; const r = o.w * .55, gr = ctx.createRadialGradient(o.x, o.y - o.h * .45, r * .2, o.x, o.y - o.h * .45, r); gr.addColorStop(0, `rgba(120,240,255,${.25 + .2 * Math.sin(G.t * 10)})`); gr.addColorStop(1, "rgba(120,240,255,0)"); ctx.fillStyle = gr; ctx.fillRect(o.x - r, o.y - o.h * .45 - r, r * 2, r * 2); ctx.restore(); bar(o.x, o.y + 8, 80, k, "#ffd76a"); }
+      if (o.upT > 0) { const k = 1 - o.upT / o.upDur; ctx.save(); ctx.globalCompositeOperation = "lighter"; const r = o.w * .55, gr = ctx.createRadialGradient(o.x, o.y - o.h * .45, r * .2, o.x, o.y - o.h * .45, r); gr.addColorStop(0, `rgba(120,240,255,${.25 + .2 * Math.sin(G.t * 10)})`); gr.addColorStop(1, "rgba(120,240,255,0)"); ctx.fillStyle = gr; ctx.fillRect(o.x - r, o.y - o.h * .45 - r, r * 2, r * 2); ctx.restore(); bar(o.x, o.y + 8, 80, k, "#ffd76a"); ctx.font = "bold 15px system-ui,sans-serif"; ctx.textAlign = "center"; ctx.fillStyle = "#ffe58a"; ctx.strokeStyle = "rgba(0,0,0,.8)"; ctx.lineWidth = 3; ctx.strokeText("⏱ " + fmt(o.upT), o.x, o.y + 30); ctx.fillText("⏱ " + fmt(o.upT), o.x, o.y + 30); }
       if (G.needB === o && o.upT <= 0) { const bob = Math.sin(G.t * 5) * 6; ctx.font = "bold 34px system-ui,sans-serif"; ctx.textAlign = "center"; ctx.fillStyle = "#5f8"; ctx.strokeStyle = "rgba(0,0,0,.8)"; ctx.lineWidth = 4; ctx.strokeText("⬆", o.x, o.y - o.h - 26 + bob); ctx.fillText("⬆", o.x, o.y - o.h - 26 + bob); }
     } else if (o.kind === "w") {
       const im = A.b_wreck, w = 200, h = w * im.height / im.width; ctx.drawImage(im, o.x - w / 2, o.y - h + 20, w, h);
@@ -883,7 +945,7 @@ let last = 0;
 function frame(ts) {
   const dt = Math.min(.05, (ts - last) / 1000 || 0); last = ts;
   requestAnimationFrame(frame);
-  try { if (!G.paused && !G.over) update(dt); draw(); hud(); } catch (e) { console.error(e); }
+  try { if (!G.paused && !G.over) update(dt); draw(); hud(); if (bldSel && G.t - (G.upRef || 0) > .5) { G.upRef = G.t; refreshUp(); } } catch (e) { console.error(e); }
 }
 document.addEventListener("visibilitychange", () => { if (document.hidden) { if (!G.paused) { G.paused = true; G.autoPaused = true; } bv.pause(); } else if (G.autoPaused) { G.autoPaused = false; G.paused = false; if (buildings.some(b => !b.built) && bvOk) bv.play().catch(() => { }); } });
 
@@ -896,7 +958,7 @@ async function boot() {
   if (!localStorage.getItem("iv_intro") && !/nointro/.test(location.search)) playIntro(go); else go();
   requestAnimationFrame(frame);
 }
-window.__G = () => ({ G, buildings, astros, beasts, deposits, wrecks, cam, TH }); window.__open = w => openWreck(w); window.__openB = b => openBuilding(b);
+window.__G = () => ({ G, buildings, astros, beasts, deposits, wrecks, cam, TH }); window.__open = w => openWreck(w); window.__openB = b => openBuilding(b); window.__bld = () => bldSel;
 boot();
 </script>
 </body>
