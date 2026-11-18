@@ -44,6 +44,8 @@ html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:syste
 #sub{position:absolute;bottom:8%;left:0;right:0;text-align:center;font-size:clamp(16px,3vw,28px);font-weight:700;text-shadow:0 2px 6px #000;padding:0 10%}
 #place{position:fixed;z-index:6;bottom:max(14px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);display:none;gap:12px}
 #place.show{display:flex}
+#hand{position:fixed;z-index:7;font-size:46px;pointer-events:none;display:none;filter:drop-shadow(0 0 10px #4ef);animation:bob .8s ease-in-out infinite alternate;transform-origin:50% 0}
+@keyframes bob{from{margin-top:0}to{margin-top:16px}}
 #loading{position:fixed;inset:0;z-index:50;background:#000;display:flex;align-items:center;justify-content:center;font-size:18px;color:#7ff0ff}
 </style>
 </head>
@@ -51,7 +53,7 @@ html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:syste
 <canvas id="cv"></canvas>
 <canvas id="mini" width="130" height="130"></canvas>
 
-<div id="res" class="hud"><div class="pill" id="crys">💎 0</div><div class="pill" id="crew">👨‍🚀 0</div></div>
+<div id="res" class="hud"><div class="pill" id="crys">💎 0</div><div class="pill" id="pow">⚡ 0</div><div class="pill" id="crew">👨‍🚀 0</div></div>
 <div id="clock" class="hud pill">☀️</div>
 <div id="topR" class="hud"><div class="btn" id="bHelp">💡</div><div class="btn" id="bMenu">⚙️</div></div>
 <div id="acts" class="hud">
@@ -65,12 +67,16 @@ html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:syste
 
 <div class="panel" id="buildP"><div class="card">
   <h2 data-t="build"></h2>
-  <div class="row">
-    <div class="item" id="itTower"><img src="assets/b_tower.png"><b data-t="tower"></b><span>💎 100</span></div>
-    <div class="item" id="itAstro"><img id="astroIcon" alt=""><b data-t="astro"></b><span>💎 80</span></div>
-  </div>
+  <div class="row" id="buildRow"></div>
   <div class="big alt" id="buildClose" data-t="close"></div>
 </div></div>
+
+<div class="panel" id="wreckP"><div class="card">
+  <img id="wImg" style="width:220px;height:140px;object-fit:contain">
+  <h2 id="wName"></h2><p id="wDesc"></p>
+  <div class="row"><div class="big" id="wGo"></div><div class="big alt" id="wNo" data-t="close"></div></div>
+</div></div>
+<div id="hand">👆</div>
 
 <div class="panel" id="menuP"><div class="card">
   <h2>Interplanetary Voyage</h2>
@@ -97,11 +103,28 @@ const TX = {
   build: ["بناء", "Build"], all: ["الكل", "All"], tower: ["برج ليزر", "Laser Tower"], astro: ["رائد فضاء", "Astronaut"],
   close: ["إغلاق", "Close"], resume: ["متابعة", "Resume"], intro: ["مشاهدة البداية", "Watch intro"], newgame: ["لعبة جديدة", "New game"],
   skip: ["تخطي ⏭", "Skip ⏭"], day: ["اليوم", "Day"], night: ["الليل", "Night"],
-  t1: ["اضغط على رائد فضاء لتحديده 👨‍🚀", "Tap an astronaut to select it 👨‍🚀"],
-  t2: ["اضغط على الكريستال اللامع 💎 ليبدأ الجمع", "Tap a glowing crystal 💎 to start mining"],
-  t3: ["رائع! اجمع 100 كريستال لبناء أول برج ليزر", "Great! Collect 100 crystals to build your first laser tower"],
-  t4: ["اضغط 🏗️ بناء واختر برج ليزر، ثم اختر مكانه قرب القاعدة", "Tap 🏗️ Build, pick Laser Tower and place it near the base"],
-  t5: ["الليل قادم! الكائنات تهاجم ليلاً وأبراج الليزر تدافع تلقائياً", "Night is coming! Creatures attack at night; laser towers fire automatically"],
+  command: ["مركز القيادة", "Command Center"], power: ["محطة طاقة شمسية", "Solar Power Station"], oxygen: ["مولّد أكسجين", "Oxygen Generator"],
+  greenhouse: ["صوبة زراعية", "Greenhouse"], quarters: ["سكن الطاقم", "Crew Quarters"],
+  d_command: ["قلب القاعدة. إليه يعود الرواد بالكريستال، ولو سقط تخسر.", "The heart of the base. Astronauts bring crystals here; if it falls, you lose."],
+  d_power: ["تنتج الطاقة لتشغيل أبراج الليزر. إنتاجها يقل بالليل.", "Produces power for laser towers. Output drops at night."],
+  d_oxygen: ["يوفر الهواء للطاقم. كل مولّد يكفي 5 رواد.", "Makes air for the crew. Each one supports 5 astronauts."],
+  d_greenhouse: ["تزرع الأكل للطاقم. كل صوبة تكفي 5 رواد.", "Grows food for the crew. Each one feeds 5 astronauts."],
+  d_quarters: ["تزيد عدد الرواد 4، وينضم رائد جديد فوراً.", "Room for 4 more astronauts; one joins right away."],
+  d_tower: ["يضرب الكائنات تلقائياً ويحتاج طاقة.", "Fires at creatures automatically; needs power."],
+  d_astro: ["رائد جديد يجمع الكريستال. يحتاج أكسجين وأكل.", "A new astronaut to mine crystals. Needs oxygen and food."],
+  free: ["مجاناً", "Free"], follow: ["اتبع التعليمات أولاً 👆", "Follow the instructions first 👆"],
+  lowP: ["⚡ الطاقة لا تكفي، الأبراج أضعف. ابنِ محطة طاقة", "⚡ Not enough power, towers are weaker. Build a power station"],
+  needSup: ["الأكسجين أو الأكل لا يكفي لرائد جديد", "Not enough oxygen or food for another astronaut"],
+  t1: ["سفينتك تحطمت! اضغط على الحطام 👆 لتبني مركز القيادة", "Your ship crashed! Tap the wreckage 👆 to build the Command Center"],
+  t2: ["ممتاز! الآن ابنِ محطة الطاقة الشمسية ⚡", "Great! Now build the Solar Power Station ⚡"],
+  t3: ["الطاقم يحتاج هواء. ابنِ مولّد الأكسجين", "The crew needs air. Build the Oxygen Generator"],
+  t4: ["والأكل! ابنِ الصوبة الزراعية 🥬", "And food! Build the Greenhouse 🥬"],
+  t5: ["الآن نحتاج كريستال. اضغط على رائد فضاء لتحديده 👨‍🚀", "Now we need crystals. Tap an astronaut to select it 👨‍🚀"],
+  t6: ["اضغط على الكريستال اللامع 💎 ليبدأ الجمع", "Tap a glowing crystal 💎 to start mining"],
+  t7: ["رائع! اجمع 60 كريستال لبناء سكن الطاقم", "Great! Collect 60 crystals to build the Crew Quarters"],
+  t8: ["ابنِ سكن الطاقم ليزيد عدد الرواد", "Build the Crew Quarters to grow your crew"],
+  t9: ["الكائنات تهاجم بالليل! اجمع 100 كريستال وابنِ برج الليزر", "Creatures attack at night! Collect 100 crystals and build the Laser Tower"],
+  t10: ["الليل قادم! أبراج الليزر تدافع تلقائياً. البناء متاح الآن من زر 🏗️", "Night is coming! Laser towers fire automatically. Build more from the 🏗️ button"],
   tdone: ["أنت الآن القائد. اصمد 5 ليالٍ لتأمين القاعدة", "You are in command now. Survive 5 nights to secure the base"],
   help: ["حدد الرواد واضغط على الكريستال للجمع. ابنِ أبراج ليزر قبل الليل. درّب رواداً جدداً من قائمة البناء. لا يمكن المشي على الماء أو الجبال.",
          "Select astronauts and tap crystals to mine. Build laser towers before night. Train more astronauts from the Build menu. Water and mountains block movement."],
@@ -125,7 +148,7 @@ const PLAY_URL = "https://play.google.com/store/apps/details?id=com.interplaneta
 
 // ============================================================ assets
 const A = {};
-const IMG = ["tex_ground", "tex_sand", "tex_grass", "tex_cliff", "tex_water", "b_command", "b_tower", "p_tree", "p_crystal", "p_rock",
+const IMG = ["tex_ground", "tex_sand", "tex_grass", "tex_cliff", "tex_water", "b_command", "b_tower", "b_power", "b_oxygen", "b_quarters", "b_greenhouse", "b_wreck", "p_tree", "p_crystal", "p_rock",
   "s_astro_front", "s_astro_back", "s_astro_side", "s_beast_front", "s_beast_side"];
 function loadAll() {
   return Promise.all(IMG.map(n => new Promise(res => {
@@ -328,62 +351,86 @@ function findPath(sx, sy, tx, ty, ignoreOcc) {
 function los(a, b, ok) { const d = Math.hypot(b.x - a.x, b.y - a.y), n = Math.ceil(d / (CELL / 3)); for (let i = 1; i < n; i++) { const t = i / n, [x, y] = cellOf(lerp(a.x, b.x, t), lerp(a.y, b.y, t)); if (!ok(x, y)) return false; } return true; }
 
 // ============================================================ game state
-const G = { t: 0, day: 1, phase: "day", phaseT: 0, crystals: 60, paused: true, over: false, won: false, tut: 0, building: null, maxCrew: 8 };
-let buildings = [], astros = [], beasts = [], deposits = [], props = [], fx = [], lasers = [];
+const G = { t: 0, day: 1, phase: "day", phaseT: 0, crystals: 150, paused: true, over: false, won: false, tut: 0, maxCrew: 3, power: { prod: 0, use: 0, k: 1 } };
+let buildings = [], astros = [], beasts = [], deposits = [], props = [], fx = [], lasers = [], wrecks = [];
 const DAY_LEN = 150, NIGHT_LEN = 75, WIN_NIGHTS = 5;
-const BT = { command: { img: "b_command", w: 370, hp: 1500, r: 135 }, tower: { img: "b_tower", w: 150, hp: 500, r: 46, range: 310, dps: 26 } };
+// building table: sprite width in the world, hit points, footprint radius, cost, and where the building sits inside its Flow video
+const BT = {
+  command: { img: "b_command", w: 370, hp: 1500, r: 135, cost: 0, vid: { cx: .5, cy: .47, bw: .63, sbw: .75, scy: .45 } },
+  power: { img: "b_power", w: 270, hp: 450, r: 95, cost: 40, vid: { cx: .5, cy: .52, bw: .66, sbw: .79, scy: .5 } },
+  oxygen: { img: "b_oxygen", w: 220, hp: 450, r: 80, cost: 50, vid: { cx: .5, cy: .47, bw: .5, sbw: .68, scy: .45 } },
+  greenhouse: { img: "b_greenhouse", w: 250, hp: 450, r: 90, cost: 50, vid: { cx: .5, cy: .5, bw: .58, sbw: .83, scy: .5 } },
+  quarters: { img: "b_quarters", w: 220, hp: 450, r: 80, cost: 60, vid: { cx: .5, cy: .52, bw: .47, sbw: .62, scy: .5 } },
+  tower: { img: "b_tower", w: 150, hp: 500, r: 46, cost: 100, range: 310, dps: 26, vid: { cx: .5, cy: .52, bw: .375, sbw: .62, scy: .48 } }
+};
+const ASTRO_COST = 80;
+// tutorial: step -> which wreck the hand points at
+const TUT_WRECK = { 1: "command", 2: "power", 3: "oxygen", 4: "greenhouse", 8: "quarters", 9: "tower" };
 
+function footY(b) { return b.y - b.h * .18; }
 function addBuilding(type, x, y, built) {
   const d = BT[type], im = A[d.img];
-  const b = { kind: "b", type, x, y, w: d.w, h: d.w * im.height / im.width, hp: d.hp, max: d.hp, r: d.r, built: !!built, prog: built ? 1 : 0, fade: built ? 1 : 0, aim: null, zapT: 0 };
-  buildings.push(b); markOcc(x, y - b.h * .18, d.r, 1); return b;
+  const b = { kind: "b", type, x, y, w: d.w, h: d.w * im.height / im.width, hp: d.hp, max: d.hp, r: d.r, built: !!built, prog: built ? 1 : 0, fade: built ? 1 : 0, aim: null };
+  buildings.push(b); markOcc(x, footY(b), d.r, 1); return b;
 }
 function addAstro(x, y) { const a = { kind: "a", x, y, hp: 60, max: 60, path: null, job: null, carry: 0, mineT: 0, dir: "front", flip: false, anim: Math.random() * 12, moving: false, sel: false, downT: 0 }; astros.push(a); return a; }
-function cmd() { return buildings.find(b => b.type === "command"); }
+function cmd() { return buildings.find(b => b.type === "command" && b.built); }
+const count = t => buildings.filter(b => b.type === t && b.built).length;
+function addWreck(type, x, y) { const w = { kind: "w", type, x, y }; wrecks.push(w); markOcc(x, y - 30, 80, 1); return w; }
+function removeWreck(w) { markOcc(w.x, w.y - 30, 80, 0); wrecks = wrecks.filter(o => o !== w); }
 
 function newGame(sd) {
   genWorld(sd);
-  buildings = []; astros = []; beasts = []; deposits = []; props = []; fx = []; lasers = [];
+  buildings = []; astros = []; beasts = []; deposits = []; props = []; fx = []; lasers = []; wrecks = [];
   const c = WORLD / 2;
-  addBuilding("command", c, c + 60, true);
-  for (let i = 0; i < 3; i++) addAstro(c - 60 + i * 60, c + 140);
+  addWreck("command", c, c + 60);
+  addWreck("power", c - 390, c - 110);
+  addWreck("oxygen", c + 390, c - 110);
+  addWreck("greenhouse", c - 370, c + 280);
+  addWreck("quarters", c + 370, c + 290);
+  addWreck("tower", c + 10, c + 450);
+  for (let i = 0; i < 2; i++) addAstro(c - 40 + i * 80, c + 190);
   scatter(rng(sd ^ 0x5151));
-  Object.assign(G, { t: 0, day: 1, phase: "day", phaseT: 0, crystals: 60, over: false, won: false, building: null });
+  Object.assign(G, { t: 0, day: 1, phase: "day", phaseT: 0, crystals: 150, over: false, won: false });
   G.tut = localStorage.getItem("iv_tut") ? 99 : 1;
-  cam.x = c; cam.y = c + 40; cam.z = 1;
+  if (G.tut === 99) { // returning players skip the guided start: everything from the wrecks is buildable straight away
+  }
+  cam.x = c; cam.y = c + 60; cam.z = .8;
   save();
 }
 function scatter(r) {
   const c = WORLD / 2;
   const tryPlace = (fn, n, minD, maxD) => { let k = 0, guard = 0; while (k < n && guard++ < n * 60) { const a = r() * 6.283, d = lerp(minD, maxD, r()), x = c + Math.cos(a) * d, y = c + Math.sin(a) * d; if (fn(x, y)) k++; } };
-  // crystals: a few near the base, more further out
-  const dep = (x, y) => { const [i, j] = cellOf(x, y); if (!reach[j * N + i] || occ[j * N + i]) return false; for (const d of deposits) if (Math.hypot(d.x - x, d.y - y) < 260) return false; deposits.push({ kind: "d", x, y, amt: 250, max: 250 }); markOcc(x, y, 30, 1); return true; };
-  tryPlace(dep, 4, 330, 650); tryPlace(dep, 14, 650, 2300);
-  const prop = (type, test) => (x, y) => { const [i, j] = cellOf(x, y); if (!walk[j * N + i] || occ[j * N + i] || !test(H[j * N + i])) return false; if (Math.hypot(x - c, y - c) < 430) return false; props.push({ kind: "p", type, x, y, s: lerp(.8, 1.2, r()), flip: r() < .5 }); markOcc(x, y, type === "tree" ? 22 : 26, 1); return true; };
-  tryPlace(prop("tree", h => h > TH.sand && h < TH.grass), 90, 420, 2500);
-  tryPlace(prop("rock", h => h > TH.grass), 45, 420, 2500);
+  const nearWreck = (x, y, m) => wrecks.some(w => Math.hypot(w.x - x, w.y - y) < m);
+  const dep = (x, y) => { const [i, j] = cellOf(x, y); if (!reach[j * N + i] || occ[j * N + i] || nearWreck(x, y, 200)) return false; for (const d of deposits) if (Math.hypot(d.x - x, d.y - y) < 260) return false; deposits.push({ kind: "d", x, y, amt: 250, max: 250 }); markOcc(x, y, 30, 1); return true; };
+  tryPlace(dep, 4, 560, 780); tryPlace(dep, 14, 780, 2300);
+  const prop = (type, test) => (x, y) => { const [i, j] = cellOf(x, y); if (!walk[j * N + i] || occ[j * N + i] || !test(H[j * N + i])) return false; if (Math.hypot(x - c, y - c) < 600) return false; props.push({ kind: "p", type, x, y, s: lerp(.8, 1.2, r()), flip: r() < .5 }); markOcc(x, y, type === "tree" ? 22 : 26, 1); return true; };
+  tryPlace(prop("tree", h => h > TH.sand && h < TH.grass), 90, 600, 2500);
+  tryPlace(prop("rock", h => h > TH.grass), 45, 600, 2500);
 }
 
 // ============================================================ save / load
 function save() {
   const s = {
-    v: 1, seed, day: G.day, crystals: G.crystals, tut: G.tut,
+    v: 2, seed, day: G.day, crystals: G.crystals, tut: G.tut,
     b: buildings.filter(b => b.built).map(b => [b.type, b.x | 0, b.y | 0, b.hp | 0]),
+    w: wrecks.map(w => [w.type, w.x | 0, w.y | 0]),
     a: astros.length, d: deposits.map(d => [d.x | 0, d.y | 0, d.amt | 0]), p: props.map(p => [p.type, p.x | 0, p.y | 0, +p.s.toFixed(2), p.flip ? 1 : 0])
   };
   try { localStorage.setItem("iv_save", JSON.stringify(s)); } catch (e) { }
 }
 function load() {
   let s; try { s = JSON.parse(localStorage.getItem("iv_save") || "null"); } catch (e) { }
-  if (!s || s.v !== 1) return false;
+  if (!s || s.v !== 2) return false;
   genWorld(s.seed);
-  buildings = []; astros = []; beasts = []; fx = []; lasers = [];
+  buildings = []; astros = []; beasts = []; fx = []; lasers = []; wrecks = [];
+  for (const [t, x, y] of s.w) addWreck(t, x, y);
   for (const [t, x, y, hp] of s.b) { const b = addBuilding(t, x, y, true); b.hp = hp; }
   deposits = s.d.map(([x, y, amt]) => { markOcc(x, y, 30, 1); return { kind: "d", x, y, amt, max: 250 }; });
   props = s.p.map(([type, x, y, sc, f]) => { markOcc(x, y, type === "tree" ? 22 : 26, 1); return { kind: "p", type, x, y, s: sc, flip: !!f }; });
-  const c = cmd() || { x: WORLD / 2, y: WORLD / 2 };
-  for (let i = 0; i < s.a; i++) addAstro(c.x - 80 + (i % 4) * 50, c.y + 90 + Math.floor(i / 4) * 40);
-  Object.assign(G, { day: s.day, crystals: s.crystals, phase: "day", phaseT: 0, over: false, won: false, tut: s.tut, building: null });
+  const c = cmd() || { x: WORLD / 2, y: WORLD / 2 + 60 };
+  for (let i = 0; i < s.a; i++) addAstro(c.x - 80 + (i % 4) * 50, c.y + 120 + Math.floor(i / 4) * 40);
+  Object.assign(G, { day: s.day, crystals: s.crystals, phase: "day", phaseT: 0, over: false, won: false, tut: s.tut });
   cam.x = c.x; cam.y = c.y; return true;
 }
 
@@ -393,9 +440,10 @@ let W = 0, Hh = 0, DPR = 1;
 function resize() { DPR = Math.min(window.devicePixelRatio || 1, 1.6); W = innerWidth; Hh = innerHeight; cv.width = W * DPR; cv.height = Hh * DPR; }
 addEventListener("resize", resize);
 const toWorld = (sx, sy) => ({ x: (sx - W / 2) / cam.z + cam.x, y: (sy - Hh / 2) / cam.z + cam.y });
+const toScreen = (x, y) => ({ x: (x - cam.x) * cam.z + W / 2, y: (y - cam.y) * cam.z + Hh / 2 });
 function clampCam() { const hw = W / 2 / cam.z, hh = Hh / 2 / cam.z; cam.x = clamp(cam.x, hw, WORLD - hw); cam.y = clamp(cam.y, hh, WORLD - hh); }
 const ptrs = new Map(); let drag = null, pinch = null, ghost = null;
-cv.addEventListener("pointerdown", e => { ac(); cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (ptrs.size === 1) drag = { x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y, moved: false }; else if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), z: cam.z }; drag = null; } });
+cv.addEventListener("pointerdown", e => { ac(); cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); G.focus = null; if (ptrs.size === 1) drag = { x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y, moved: false }; else if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), z: cam.z }; drag = null; } });
 cv.addEventListener("pointermove", e => {
   if (!ptrs.has(e.pointerId)) return; ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
   if (pinch && ptrs.size >= 2) { const [a, b] = [...ptrs.values()]; cam.z = clamp(pinch.z * Math.hypot(a.x - b.x, a.y - b.y) / pinch.d, .45, 1.6); clampCam(); }
@@ -404,7 +452,7 @@ cv.addEventListener("pointermove", e => {
 const up = e => { if (drag && !drag.moved && ptrs.size === 1) tap(e.clientX, e.clientY); ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null; if (!ptrs.size) drag = null; };
 cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", e => { ptrs.delete(e.pointerId); drag = null; pinch = null; });
 cv.addEventListener("wheel", e => { cam.z = clamp(cam.z * (e.deltaY < 0 ? 1.1 : .9), .45, 1.6); clampCam(); }, { passive: true });
-mini.addEventListener("pointerdown", e => { const r = mini.getBoundingClientRect(); cam.x = (e.clientX - r.left) / r.width * WORLD; cam.y = (e.clientY - r.top) / r.height * WORLD; clampCam(); });
+mini.addEventListener("pointerdown", e => { const r = mini.getBoundingClientRect(); G.focus = null; cam.x = (e.clientX - r.left) / r.width * WORLD; cam.y = (e.clientY - r.top) / r.height * WORLD; clampCam(); });
 
 function selected() { return astros.filter(a => a.sel && !a.downT); }
 function updSelBtn() { $("bNone").style.display = selected().length ? "flex" : "none"; }
@@ -415,45 +463,80 @@ function tap(sx, sy) {
   // astronaut hit test (sprite box)
   let hit = null, hd = 1e9;
   for (const a of astros) { if (a.downT) continue; const d = Math.hypot(p.x - a.x, p.y - (a.y - 28)); if (d < 42 / Math.min(cam.z, 1) && d < hd) { hd = d; hit = a; } }
-  if (hit) { hit.sel = !hit.sel; chime(hit.sel ? 880 : 520); updSelBtn(); if (G.tut === 1 && hit.sel) setTut(2); return; }
+  if (hit) { hit.sel = !hit.sel; chime(hit.sel ? 880 : 520); updSelBtn(); return; }
+  // wreckage -> build offer
+  const wk = wrecks.find(w => Math.hypot(p.x - w.x, p.y - (w.y - 40)) < 110);
+  if (wk) { openWreck(wk); return; }
   const sel = selected(); if (!sel.length) return;
   const dep = deposits.find(d => d.amt > 0 && Math.hypot(p.x - d.x, p.y - (d.y - 20)) < 70);
-  if (dep) { sel.forEach(a => { a.job = { dep }; goTo(a, dep.x, dep.y + 26); }); fx.push({ t: "ring", x: dep.x, y: dep.y, c: "#5ff", life: .6 }); if (G.tut === 2) setTut(3); return; }
+  if (dep) { if (!cmd()) return toast(T("follow")); sel.forEach(a => { a.job = { dep }; goTo(a, dep.x, dep.y + 26); }); fx.push({ t: "ring", x: dep.x, y: dep.y, c: "#5ff", life: .6 }); return; }
   sel.forEach((a, i) => { a.job = null; const o = i - (sel.length - 1) / 2; goTo(a, p.x + o * 30, p.y + (i % 2) * 20); });
   fx.push({ t: "ring", x: p.x, y: p.y, c: "#7ff", life: .5 });
 }
 function goTo(u, x, y) { u.path = findPath(u.x, u.y, x, y, false) || null; }
 
 // ============================================================ HUD wiring
-$("bAll").onclick = () => { const s = astros.filter(a => !a.downT); const allOn = s.every(a => a.sel); s.forEach(a => a.sel = !allOn); updSelBtn(); if (G.tut === 1 && !allOn) setTut(2); };
+let wreckSel = null;
+function openWreck(w) {
+  if (G.tut <= 9 && TUT_WRECK[G.tut] !== w.type) return toast(T("follow"));
+  wreckSel = w; const d = BT[w.type];
+  $("wImg").src = "assets/" + d.img + ".png"; $("wName").textContent = T(w.type); $("wDesc").textContent = T("d_" + w.type);
+  $("wGo").textContent = "🏗️ " + T("build") + " · " + (d.cost ? "💎 " + d.cost : T("free"));
+  G.paused = true; $("wreckP").classList.add("show");
+}
+$("wNo").onclick = () => { $("wreckP").classList.remove("show"); G.paused = false; wreckSel = null; };
+$("wGo").onclick = () => {
+  const w = wreckSel, d = BT[w.type];
+  if (G.crystals < d.cost) return toast(T("noC"));
+  if (buildings.some(b => !b.built)) return toast(T("busy"));
+  $("wreckP").classList.remove("show"); G.paused = false; wreckSel = null;
+  G.crystals -= d.cost; removeWreck(w);
+  const b = addBuilding(w.type, w.x, w.y, false); startConstruction(b);
+};
+$("bAll").onclick = () => { const s = astros.filter(a => !a.downT); const allOn = s.every(a => a.sel); s.forEach(a => a.sel = !allOn); updSelBtn(); };
 $("bNone").onclick = () => { astros.forEach(a => a.sel = false); updSelBtn(); };
 $("bBuild").onclick = () => { if (!G.paused) { G.paused = true; $("buildP").classList.add("show"); refreshBuild(); } };
 $("buildClose").onclick = () => { $("buildP").classList.remove("show"); G.paused = false; };
-function refreshBuild() { $("itTower").classList.toggle("dis", G.crystals < 100); $("itAstro").classList.toggle("dis", G.crystals < 80 || astros.length >= G.maxCrew); }
-$("itTower").onclick = () => {
-  if (G.crystals < 100) return toast(T("noC"));
+const MENU = ["tower", "power", "oxygen", "greenhouse", "quarters", "astro"];
+let astroIcon = "";
+function refreshBuild() {
+  const row = $("buildRow"); row.innerHTML = "";
+  for (const k of MENU) {
+    const cost = k === "astro" ? ASTRO_COST : BT[k].cost;
+    const it = document.createElement("div"); it.className = "item" + (G.crystals < cost ? " dis" : "");
+    it.innerHTML = `<img src="${k === "astro" ? astroIcon : "assets/" + BT[k].img + ".png"}"><b>${T(k === "astro" ? "astro" : k)}</b><span>💎 ${cost}</span>`;
+    it.onclick = () => menuPick(k); row.appendChild(it);
+  }
+}
+function menuPick(k) {
+  if (k === "astro") {
+    if (astros.length >= G.maxCrew) return toast(astros.length >= 3 + 4 * count("quarters") ? T("maxA") : T("needSup"));
+    if (G.crystals < ASTRO_COST) return toast(T("noC"));
+    G.crystals -= ASTRO_COST; const c = cmd(); const a = addAstro(c.x, c.y + 110); goTo(a, c.x + (Math.random() - .5) * 160, c.y + 170); toast(T("newA")); chime(990); refreshBuild(); return;
+  }
+  if (G.crystals < BT[k].cost) return toast(T("noC"));
   if (buildings.some(b => !b.built)) return toast(T("busy"));
   $("buildP").classList.remove("show"); G.paused = false;
-  const c = cmd(); ghost = { x: c.x + 260, y: c.y + 40 }; $("place").classList.add("show"); toast(T("placeT"));
-};
-$("itAstro").onclick = () => {
-  if (astros.length >= G.maxCrew) return toast(T("maxA"));
-  if (G.crystals < 80) return toast(T("noC"));
-  G.crystals -= 80; const c = cmd(); const a = addAstro(c.x, c.y + 80); goTo(a, c.x + (Math.random() - .5) * 160, c.y + 140); toast(T("newA")); chime(990); refreshBuild();
-};
-function ghostOk() { if (!ghost) return false; const [i, j] = cellOf(ghost.x, ghost.y - 25); for (let y = -1; y <= 1; y++) for (let x = -1; x <= 1; x++) { if (!free(i + x, j + y) || !reach[(j + y) * N + i + x]) return false; } return true; }
+  const c = cmd(); ghost = { type: k, x: c.x + 300, y: c.y + 60 }; $("place").classList.add("show"); toast(T("placeT"));
+}
+function ghostOk() {
+  if (!ghost) return false; const d = BT[ghost.type], im = A[d.img], h = d.w * im.height / im.width, fy = ghost.y - h * .18;
+  const [a, b] = cellOf(ghost.x - d.r, fy - d.r), [c2, d2] = cellOf(ghost.x + d.r, fy + d.r);
+  for (let j = b; j <= d2; j++) for (let i = a; i <= c2; i++) if (Math.hypot((i + .5) * CELL - ghost.x, (j + .5) * CELL - fy) < d.r && (!free(i, j) || !reach[j * N + i])) return false;
+  return true;
+}
 $("pOk").onclick = () => {
   if (!ghostOk()) return toast(T("bad"));
-  G.crystals -= 100; const b = addBuilding("tower", ghost.x, ghost.y, false); startConstruction(b);
+  G.crystals -= BT[ghost.type].cost; const b = addBuilding(ghost.type, ghost.x, ghost.y, false); startConstruction(b);
   ghost = null; $("place").classList.remove("show");
 };
 $("pNo").onclick = () => { ghost = null; $("place").classList.remove("show"); };
-$("bHelp").onclick = () => { showHint(G.tut >= 1 && G.tut <= 5 ? T("t" + G.tut) : T("help"), 7); };
+$("bHelp").onclick = () => { showHint(G.tut >= 1 && G.tut <= 10 ? T("t" + G.tut) : T("help"), 7); };
 $("bMenu").onclick = () => { G.paused = true; $("menuP").classList.add("show"); };
 $("mResume").onclick = () => { $("menuP").classList.remove("show"); G.paused = false; };
 $("mIntro").onclick = () => { $("menuP").classList.remove("show"); playIntro(() => { G.paused = false; }); };
 $("mNew").onclick = () => {
-  endPanel(T("newgame"), T("sure"), [[T("yes"), () => { localStorage.removeItem("iv_save"); localStorage.removeItem("iv_tut"); newGame((Math.random() * 1e9) | 0); $("menuP").classList.remove("show"); G.paused = false; }], [T("no"), () => { }]]);
+  endPanel(T("newgame"), T("sure"), [[T("yes"), () => { localStorage.removeItem("iv_save"); localStorage.removeItem("iv_tut"); newGame((Math.random() * 1e9) | 0); $("menuP").classList.remove("show"); G.paused = false; setTut(1); }], [T("no"), () => { }]]);
 };
 function endPanel(title, msg, btns) {
   $("endT").textContent = title; $("endM").textContent = msg; const r = $("endBtns"); r.innerHTML = "";
@@ -462,65 +545,101 @@ function endPanel(title, msg, btns) {
 }
 let hintT = 0;
 function showHint(m, secs) { const h = $("hint"); h.textContent = m; h.classList.remove("show"); void h.offsetWidth; h.classList.add("show"); hintT = secs || 1e9; }
+function tutTarget() {
+  const t = G.tut;
+  if (TUT_WRECK[t]) { const w = wrecks.find(o => o.type === TUT_WRECK[t]); return w ? { x: w.x, y: w.y - 70 } : null; }
+  if (t === 5) { const a = astros.find(o => !o.downT); return a ? { x: a.x, y: a.y - 70 } : null; }
+  if (t === 6) { const c = cmd() || { x: WORLD / 2, y: WORLD / 2 }; let best = null, bd = 1e9; for (const d of deposits) { if (d.amt <= 0) continue; const k = Math.hypot(d.x - c.x, d.y - c.y); if (k < bd) { bd = k; best = d; } } return best ? { x: best.x, y: best.y - 60 } : null; }
+  return null;
+}
 function setTut(n) {
   G.tut = n;
-  if (n >= 1 && n <= 5) showHint(T("t" + n)); else if (n === 6) { showHint(T("tdone"), 8); G.tut = 99; localStorage.setItem("iv_tut", "1"); }
+  if (n >= 1 && n <= 10) { showHint(T("t" + n)); const tg = tutTarget(); if (tg) G.focus = { x: tg.x, y: tg.y + 60, t: 1.2 }; }
+  else if (n === 11) { showHint(T("tdone"), 8); G.tut = 99; localStorage.setItem("iv_tut", "1"); }
+  $("bBuild").style.display = G.tut >= 10 ? "flex" : "none";
   chime(760);
 }
 
 // ============================================================ construction with video
-const bv = document.createElement("video"); bv.src = "assets/v_build_tower.mp4"; bv.playsInline = true; bv.preload = "auto";
+const VIDS = {};
+function vidFor(type) { if (!VIDS[type]) { const v = document.createElement("video"); v.src = "assets/v_build_" + type + ".mp4"; v.playsInline = true; v.preload = "auto"; VIDS[type] = v; } return VIDS[type]; }
 const bvc = document.createElement("canvas"); bvc.width = 360; bvc.height = 202; const bvg = bvc.getContext("2d");
-let bvOk = false;
+let curV = null, bvOk = false;
 function startConstruction(b) {
-  b.prog = 0; b.vid = true; bvOk = false;
-  try { bv.currentTime = 0; bv.muted = false; bv.play().then(() => bvOk = true).catch(() => { bv.muted = true; bv.play().then(() => bvOk = true).catch(() => { b.vid = false; }); }); } catch (e) { b.vid = false; }
+  b.prog = 0; b.vid = true; bvOk = false; curV = vidFor(b.type);
+  const v = curV;
+  try { v.currentTime = 0; v.muted = false; v.play().then(() => bvOk = true).catch(() => { v.muted = true; v.play().then(() => bvOk = true).catch(() => { b.vid = false; }); }); } catch (e) { b.vid = false; }
 }
 function drawBuildVideo(b) {
-  if (!bvOk || bv.readyState < 2) return false;
-  bvg.globalCompositeOperation = "source-over"; bvg.drawImage(bv, 0, 0, bvc.width, bvc.height);
+  const v = curV; if (!v || !bvOk || v.readyState < 2) return false;
+  const P = BT[b.type].vid, VW = bvc.width, VH = bvc.height;
+  bvg.globalCompositeOperation = "source-over"; bvg.drawImage(v, 0, 0, VW, VH);
   bvg.globalCompositeOperation = "destination-in";
-  const gr = bvg.createRadialGradient(bvc.width * .5, bvc.height * .52, bvc.height * .22, bvc.width * .5, bvc.height * .52, bvc.height * .5);
-  gr.addColorStop(0, "rgba(0,0,0,1)"); gr.addColorStop(1, "rgba(0,0,0,0)"); bvg.fillStyle = gr; bvg.fillRect(0, 0, bvc.width, bvc.height);
-  const vw = b.w * 1.7, vh = vw * bvc.height / bvc.width;
-  ctx.globalAlpha = 1 - b.fade; ctx.drawImage(bvc, b.x - vw / 2, b.y - b.h * .52 - vh * .52, vw, vh); ctx.globalAlpha = 1;
+  // soft oval around the building that never touches the frame edges
+  const cx = P.cx * VW, cy = P.cy * VH, rx = Math.min(P.bw * VW * .62, Math.min(cx, VW - cx) * .96), ry = Math.min(rx * .62, Math.min(cy, VH - cy) * .96);
+  bvg.save(); bvg.translate(cx, cy); bvg.scale(rx / ry, 1);
+  const gr = bvg.createRadialGradient(0, 0, ry * .55, 0, 0, ry);
+  gr.addColorStop(0, "rgba(0,0,0,1)"); gr.addColorStop(1, "rgba(0,0,0,0)"); bvg.fillStyle = gr; bvg.fillRect(-VW, -VH, VW * 2, VH * 2); bvg.restore();
+  const vw = b.w * P.sbw / P.bw, vh = vw * VH / VW, bcy = b.y - b.h + P.scy * b.h;
+  ctx.globalAlpha = 1 - b.fade; ctx.drawImage(bvc, b.x - P.cx * vw, bcy - P.cy * vh, vw, vh); ctx.globalAlpha = 1;
   return true;
 }
 
 // ============================================================ update
 function update(dt) {
   G.t += dt; G.phaseT += dt;
-  // day / night cycle (first day waits for the tutorial)
-  const dayLen = G.day === 1 && G.tut <= 4 ? 1e9 : DAY_LEN;
-  if (G.phase === "day" && G.phaseT >= dayLen) { G.phase = "night"; G.phaseT = 0; spawnWave(); toast(T("nightC")); chime(330); if (G.tut === 5) setTimeout(() => setTut(6), 9000); }
-  else if (G.phase === "night" && G.phaseT >= NIGHT_LEN) {
+  // smooth camera focus for tutorial steps
+  if (G.focus) { const k = Math.min(1, dt * 3); cam.x = lerp(cam.x, G.focus.x, k); cam.y = lerp(cam.y, G.focus.y, k); clampCam(); if ((G.focus.t -= dt) <= 0) G.focus = null; }
+  // power & life support
+  const night = G.phase === "night";
+  G.power.prod = count("power") * 30 * (night ? .5 : 1); G.power.use = (cmd() ? 5 : 0) + count("tower") * 8;
+  G.power.k = G.power.use <= G.power.prod ? 1 : Math.max(.35, G.power.prod / Math.max(1, G.power.use));
+  G.maxCrew = cmd() ? Math.min(3 + 4 * count("quarters"), 3 + 5 * count("oxygen"), 3 + 5 * count("greenhouse"), 16) : 3;
+  // day / night cycle (the first day waits for the tutorial)
+  const dayLen = G.day === 1 && G.tut <= 9 ? 1e9 : DAY_LEN;
+  if (G.phase === "day" && G.phaseT >= dayLen) {
+    G.phase = "night"; G.phaseT = 0; spawnWave(); toast(T("nightC")); chime(330); G.lowWarn = false;
+    if (G.tut === 10) setTimeout(() => setTut(11), 9000);
+  } else if (G.phase === "night" && G.phaseT >= NIGHT_LEN) {
     G.phase = "day"; G.phaseT = 0; beasts.forEach(b => b.flee = true);
     if (G.day >= WIN_NIGHTS && !G.won) { G.won = true; G.day++; save(); victory(); return; }
     G.day++; save(); toast(T("dawn")); chime(880);
   }
-  if (G.tut === 1 && astros.some(a => a.sel)) setTut(2);
-  if (G.tut === 2 && astros.some(a => a.job)) setTut(3);
-  if (G.tut === 3 && G.crystals >= 100) setTut(4);
+  if (night && G.power.k < 1 && count("tower") && !G.lowWarn) { G.lowWarn = true; toast(T("lowP")); }
+  // tutorial progress
+  const tut = G.tut;
+  if (tut === 1 && count("command")) setTut(2);
+  else if (tut === 2 && count("power")) setTut(3);
+  else if (tut === 3 && count("oxygen")) setTut(4);
+  else if (tut === 4 && count("greenhouse")) setTut(5);
+  else if (tut === 5 && astros.some(a => a.sel)) setTut(6);
+  else if (tut === 6 && astros.some(a => a.job)) setTut(7);
+  else if (tut === 7 && G.crystals >= BT.quarters.cost) setTut(8);
+  else if (tut === 8 && count("quarters")) setTut(9);
+  else if (tut === 9 && count("tower")) { setTut(10); if (G.day === 1) G.phaseT = DAY_LEN - 20; }
   // spawn queue
   if (G.spawnQ && G.spawnQ.length) { G.spawnT -= dt; if (G.spawnT <= 0) { const p = G.spawnQ.shift(); beasts.push({ kind: "e", x: p.x, y: p.y, hp: 110 + G.day * 18, max: 110 + G.day * 18, path: null, repath: 0, tgt: null, cd: 0, dir: "side", flip: false, anim: 0, flee: false, alpha: 0 }); G.spawnT = 2.2; } }
   // construction
   for (const b of buildings) if (!b.built) {
-    const dur = bvOk && bv.duration ? bv.duration : 8;
-    b.prog = clamp(bvOk ? bv.currentTime / dur : b.prog + dt / 8, 0, 1);
-    if (b.prog >= .97 || (bvOk && bv.ended)) { b.built = true; chime(1200); if (G.tut === 4) setTut(5); if (G.tut === 5 && G.day === 1) G.phaseT = DAY_LEN - 20; }
+    const v = curV, dur = bvOk && v && v.duration ? v.duration : 7;
+    b.prog = clamp(bvOk && v ? v.currentTime / dur : b.prog + dt / 7, 0, 1);
+    if (b.prog >= .97 || (bvOk && v && v.ended)) {
+      b.built = true; chime(1200);
+      if (b.type === "quarters") { const c = cmd(); if (c && astros.length < 3 + 4 * count("quarters")) { const a = addAstro(b.x, b.y + 30); goTo(a, b.x + 40, b.y + 90); toast(T("newA")); } }
+    }
   } else if (b.fade < 1) b.fade = Math.min(1, b.fade + dt / .45);
   // astronauts
   const c = cmd();
   for (const a of astros) {
-    if (a.downT) { a.downT -= dt; if (a.downT <= 0 && c) { a.downT = 0; a.hp = a.max; a.x = c.x; a.y = c.y + 90; a.path = null; } continue; }
+    if (a.downT) { a.downT -= dt; if (a.downT <= 0 && c) { a.downT = 0; a.hp = a.max; a.x = c.x; a.y = c.y + 110; a.path = null; } continue; }
     let moving = followPath(a, 78, dt);
     const j = a.job;
     if (j && !a.path) {
       if (j.back) { // deliver
-        if (c && Math.hypot(a.x - c.x, a.y - (c.y + 30)) < 190) { G.crystals += a.carry; a.carry = 0; j.back = false; fx.push({ t: "txt", x: a.x, y: a.y - 70, s: "+10 💎", life: 1.2 }); if (j.dep.amt > 0) goTo(a, j.dep.x, j.dep.y + 26); else a.job = null; }
-        else if (c) goTo(a, c.x, c.y + 120);
+        if (c && Math.hypot(a.x - c.x, a.y - (c.y + 30)) < 200) { G.crystals += a.carry; a.carry = 0; j.back = false; fx.push({ t: "txt", x: a.x, y: a.y - 70, s: "+10 💎", life: 1.2 }); if (j.dep.amt > 0) goTo(a, j.dep.x, j.dep.y + 26); else a.job = null; }
+        else if (c) goTo(a, c.x, c.y + 130);
       } else if (j.dep.amt <= 0) a.job = null;
-      else if (Math.hypot(a.x - j.dep.x, a.y - j.dep.y) < 80) { a.mineT += dt; if (a.mineT > 2.4) { a.mineT = 0; const take = Math.min(10, j.dep.amt); j.dep.amt -= take; a.carry = take; j.back = true; if (c) goTo(a, c.x + (Math.random() - .5) * 120, c.y + 120); } }
+      else if (Math.hypot(a.x - j.dep.x, a.y - j.dep.y) < 80) { a.mineT += dt; if (a.mineT > 2.4) { a.mineT = 0; const take = Math.min(10, j.dep.amt); j.dep.amt -= take; a.carry = take; j.back = true; if (c) goTo(a, c.x + (Math.random() - .5) * 120, c.y + 130); } }
       else goTo(a, j.dep.x, j.dep.y + 26);
     }
     a.moving = moving; if (moving) a.anim += dt * 13;
@@ -538,7 +657,7 @@ function update(dt) {
     }
     const t = e.tgt; if (!t) continue;
     const reachD = (t.kind === "b" ? t.r + 30 : 34);
-    const dd = Math.hypot(e.x - t.x, e.y - (t.kind === "b" ? t.y - t.h * .18 : t.y));
+    const dd = Math.hypot(e.x - t.x, e.y - (t.kind === "b" ? footY(t) : t.y));
     if (dd < reachD + 18) { e.path = null; e.moving = false; if (e.cd <= 0) { e.cd = 1.1; hurt(t, 14 + G.day * 2); fx.push({ t: "hit", x: t.x + (Math.random() - .5) * 30, y: (t.kind === "b" ? t.y - t.h * .3 : t.y - 30), life: .35 }); } e.flip = t.x < e.x; }
     else { e.moving = followPath(e, 58, dt); if (e.moving) e.anim += dt * 11; }
   }
@@ -549,10 +668,10 @@ function update(dt) {
     if (b.type !== "tower" || !b.built) continue;
     const d = BT.tower; let tg = b.aim;
     if (!tg || tg.hp <= 0 || tg.flee || dist(tg, b) > d.range) { tg = null; let bd = d.range; for (const e of beasts) { if (e.flee) continue; const k = dist(e, b); if (k < bd) { bd = k; tg = e; } } if (tg && tg !== b.aim) zap(); b.aim = tg; }
-    if (tg) { tg.hp -= d.dps * dt; lasers.push([b.x - b.w * .22, b.y - b.h * .78, tg.x, tg.y - 30]); if (tg.hp <= 0) { fx.push({ t: "boom", x: tg.x, y: tg.y - 30, life: .6 }); G.crystals += 5; fx.push({ t: "txt", x: tg.x, y: tg.y - 60, s: "+5 💎", life: 1 }); } }
+    if (tg) { tg.hp -= d.dps * G.power.k * dt; lasers.push([b.x - b.w * .22, b.y - b.h * .78, tg.x, tg.y - 30, G.power.k]); if (tg.hp <= 0) { fx.push({ t: "boom", x: tg.x, y: tg.y - 30, life: .6 }); G.crystals += 5; fx.push({ t: "txt", x: tg.x, y: tg.y - 60, s: "+5 💎", life: 1 }); } }
   }
   // buildings destroyed
-  for (const b of buildings) if (b.hp <= 0 && !b.dead) { b.dead = true; markOcc(b.x, b.y - b.h * .18, b.r, 0); fx.push({ t: "boom", x: b.x, y: b.y - b.h * .4, life: 1, big: true }); if (b.type === "command") lose(); }
+  for (const b of buildings) if (b.hp <= 0 && !b.dead) { b.dead = true; markOcc(b.x, footY(b), b.r, 0); fx.push({ t: "boom", x: b.x, y: b.y - b.h * .4, life: 1, big: true }); if (b.type === "command") lose(); }
   buildings = buildings.filter(b => !b.dead);
   fx = fx.filter(f => (f.life -= dt) > 0);
   if (toastT > 0 && (toastT -= dt) <= 0) $("toast").style.display = "none";
@@ -608,16 +727,23 @@ function draw() {
   for (const o of buildings) if (vis(o)) objs.push(o);
   for (const o of deposits) if (o.amt > 0 && vis(o)) objs.push(o);
   for (const o of props) if (vis(o)) objs.push(o);
+  for (const o of wrecks) if (vis(o)) objs.push(o);
   for (const o of astros) if (!o.downT && vis(o)) objs.push(o);
   for (const o of beasts) if (vis(o)) objs.push(o);
   objs.sort((a, b) => a.y - b.y);
   for (const o of objs) {
     if (o.kind === "b") {
-      if (!o.built || o.fade < 1) { const shown = o.vid && drawBuildVideo(o); if (!shown && !o.built) { ctx.globalAlpha = .25 + o.prog * .5; } }
+      let shown = false;
+      if (!o.built || o.fade < 1) { shown = o.vid && drawBuildVideo(o); if (!shown && !o.built) { ctx.globalAlpha = .15 + o.prog * .6; } }
       if (o.built) { ctx.globalAlpha = o.fade; ctx.drawImage(A[BT[o.type].img], o.x - o.w / 2, o.y - o.h, o.w, o.h); ctx.globalAlpha = 1; }
-      else if (!o.vid || !bvOk) { ctx.drawImage(A[BT[o.type].img], o.x - o.w / 2, o.y - o.h, o.w, o.h); ctx.globalAlpha = 1; }
+      else if (!shown) { ctx.drawImage(A[BT[o.type].img], o.x - o.w / 2, o.y - o.h, o.w, o.h); ctx.globalAlpha = 1; }
       if (!o.built) bar(o.x, o.y + 8, 80, o.prog, "#3cf");
       if (o.hp < o.max) bar(o.x, o.y - o.h - 8, o.type === "command" ? 140 : 70, o.hp / o.max, o.hp / o.max > .4 ? "#4f8" : "#f54");
+    } else if (o.kind === "w") {
+      const im = A.b_wreck, w = 200, h = w * im.height / im.width; ctx.drawImage(im, o.x - w / 2, o.y - h + 20, w, h);
+      const on = G.tut > 9 || TUT_WRECK[G.tut] === o.type, pulse = .5 + .5 * Math.sin(G.t * 4);
+      if (on) { const cy = o.y - h * .55; ctx.save(); ctx.globalCompositeOperation = "lighter"; const gr = ctx.createRadialGradient(o.x, cy, 4, o.x, cy, 60); gr.addColorStop(0, `rgba(60,230,255,${.45 + .25 * pulse})`); gr.addColorStop(1, "rgba(60,230,255,0)"); ctx.fillStyle = gr; ctx.fillRect(o.x - 60, cy - 60, 120, 120); ctx.restore();
+        ctx.fillStyle = "rgba(6,30,44,.85)"; ctx.strokeStyle = "#6ef"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(o.x, cy, 22, 0, 6.283); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#bff"; ctx.fillRect(o.x - 11, cy - 3, 22, 6); ctx.fillRect(o.x - 3, cy - 11, 6, 22); }
     } else if (o.kind === "d") {
       const w = 82 * (.55 + .45 * o.amt / o.max); const pulse = .5 + .5 * Math.sin(G.t * 2 + o.x);
       ctx.save(); ctx.globalCompositeOperation = "lighter"; const gr = ctx.createRadialGradient(o.x, o.y - 25, 4, o.x, o.y - 25, 70); gr.addColorStop(0, `rgba(60,240,255,${.22 + .12 * pulse})`); gr.addColorStop(1, "rgba(60,240,255,0)"); ctx.fillStyle = gr; ctx.fillRect(o.x - 70, o.y - 95, 140, 140); ctx.restore();
@@ -642,14 +768,14 @@ function draw() {
   }
   // lasers
   ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.lineCap = "round";
-  for (const [x1, y1, x2, y2] of lasers) { const fl = .7 + .3 * Math.random(); ctx.strokeStyle = `rgba(40,220,255,${.35 * fl})`; ctx.lineWidth = 10; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); ctx.strokeStyle = `rgba(220,255,255,${.95 * fl})`; ctx.lineWidth = 2.5; ctx.stroke(); ctx.fillStyle = "rgba(120,240,255,.8)"; ctx.beginPath(); ctx.arc(x2, y2, 7 + Math.random() * 4, 0, 6.283); ctx.fill(); }
+  for (const [x1, y1, x2, y2, pk] of lasers) { const fl = (.7 + .3 * Math.random()) * (pk < 1 ? .55 : 1); ctx.strokeStyle = `rgba(40,220,255,${.35 * fl})`; ctx.lineWidth = 10; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); ctx.strokeStyle = `rgba(220,255,255,${.95 * fl})`; ctx.lineWidth = 2.5; ctx.stroke(); ctx.fillStyle = "rgba(120,240,255,.8)"; ctx.beginPath(); ctx.arc(x2, y2, 7 + Math.random() * 4, 0, 6.283); ctx.fill(); }
   for (const f of fx) {
     if (f.t === "boom") { const k = 1 - f.life / (f.big ? 1 : .6), r = (f.big ? 140 : 46) * (.3 + k); const gr = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, r); gr.addColorStop(0, `rgba(255,240,200,${.9 * (1 - k)})`); gr.addColorStop(.4, `rgba(80,220,255,${.6 * (1 - k)})`); gr.addColorStop(1, "rgba(0,0,0,0)"); ctx.fillStyle = gr; ctx.fillRect(f.x - r, f.y - r, r * 2, r * 2); }
     if (f.t === "hit") { ctx.fillStyle = `rgba(255,120,80,${f.life * 2})`; ctx.beginPath(); ctx.arc(f.x, f.y, 10, 0, 6.283); ctx.fill(); }
   }
   ctx.restore();
   // placement ghost
-  if (ghost) { const ok = ghostOk(), d = BT.tower, im = A.b_tower, w = d.w, h = w * im.height / im.width; ctx.globalAlpha = .6; ctx.drawImage(im, ghost.x - w / 2, ghost.y - h, w, h); ctx.globalAlpha = 1; ctx.strokeStyle = ok ? "rgba(80,255,160,.9)" : "rgba(255,80,80,.9)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(ghost.x, ghost.y - 20, 60, 26, 0, 0, 6.283); ctx.stroke(); ctx.setLineDash([8, 8]); ctx.strokeStyle = "rgba(80,230,255,.35)"; ctx.beginPath(); ctx.ellipse(ghost.x, ghost.y - 20, d.range, d.range * .8, 0, 0, 6.283); ctx.stroke(); ctx.setLineDash([]); }
+  if (ghost) { const ok = ghostOk(), d = BT[ghost.type], im = A[d.img], w = d.w, h = w * im.height / im.width, fy = ghost.y - h * .18; ctx.globalAlpha = .6; ctx.drawImage(im, ghost.x - w / 2, ghost.y - h, w, h); ctx.globalAlpha = 1; ctx.strokeStyle = ok ? "rgba(80,255,160,.9)" : "rgba(255,80,80,.9)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(ghost.x, fy, d.r * 1.2, d.r * .55, 0, 0, 6.283); ctx.stroke(); if (d.range) { ctx.setLineDash([8, 8]); ctx.strokeStyle = "rgba(80,230,255,.35)"; ctx.beginPath(); ctx.ellipse(ghost.x, fy, d.range, d.range * .8, 0, 0, 6.283); ctx.stroke(); ctx.setLineDash([]); } }
   // floating texts
   ctx.font = "bold 18px system-ui,sans-serif"; ctx.textAlign = "center";
   for (const f of fx) if (f.t === "txt") { ctx.globalAlpha = clamp(f.life, 0, 1); ctx.fillStyle = "#8ff"; ctx.fillText(f.s, f.x, f.y - (1.2 - f.life) * 30); ctx.globalAlpha = 1; }
@@ -673,11 +799,12 @@ function draw() {
 }
 function nightAmount() {
   if (G.phase === "night") return smooth(0, 6, G.phaseT) * (1 - smooth(NIGHT_LEN - 6, NIGHT_LEN, G.phaseT));
-  return G.day === 1 && G.tut <= 4 ? 0 : smooth(DAY_LEN - 12, DAY_LEN, G.phaseT) * .6;
+  return G.day === 1 && G.tut <= 9 ? 0 : smooth(DAY_LEN - 12, DAY_LEN, G.phaseT) * .6;
 }
 function drawMini() {
   const s = mini.width / WORLD; mctx.imageSmoothingEnabled = false; mctx.drawImage(miniBase, 0, 0, mini.width, mini.height);
   for (const d of deposits) if (d.amt > 0) { mctx.fillStyle = "#5ff"; mctx.fillRect(d.x * s - 1.5, d.y * s - 1.5, 3, 3); }
+  for (const w of wrecks) { mctx.fillStyle = "#fc6"; mctx.fillRect(w.x * (mini.width / WORLD) - 2, w.y * (mini.width / WORLD) - 2, 4, 4); }
   for (const b of buildings) { mctx.fillStyle = "#fff"; const r = b.type === "command" ? 3 : 2; mctx.fillRect(b.x * s - r, b.y * s - r, r * 2, r * 2); }
   for (const a of astros) if (!a.downT) { mctx.fillStyle = "#7f7"; mctx.fillRect(a.x * s - 1, a.y * s - 1, 2, 2); }
   for (const e of beasts) { mctx.fillStyle = "#f44"; mctx.fillRect(e.x * s - 1.5, e.y * s - 1.5, 3, 3); }
@@ -686,7 +813,11 @@ function drawMini() {
 function hud() {
   $("crys").textContent = "💎 " + (G.crystals | 0);
   $("crew").textContent = "👨‍🚀 " + astros.filter(a => !a.downT).length + "/" + G.maxCrew;
-  const left = G.phase === "day" ? (G.day === 1 && G.tut <= 4 ? null : DAY_LEN - G.phaseT) : NIGHT_LEN - G.phaseT;
+  $("pow").textContent = "⚡ " + Math.round(G.power.prod) + "/" + G.power.use; $("pow").style.color = G.power.k < 1 ? "#f86" : "";
+  // tutorial hand pointer
+  const hand = $("hand"), tg = (!G.paused && G.tut >= 1 && G.tut <= 9) ? tutTarget() : null;
+  if (tg) { const s = toScreen(tg.x, tg.y); hand.style.display = "block"; hand.style.left = (s.x - 18) + "px"; hand.style.top = (s.y - 10) + "px"; } else hand.style.display = "none";
+  const left = G.phase === "day" ? (G.day === 1 && G.tut <= 9 ? null : DAY_LEN - G.phaseT) : NIGHT_LEN - G.phaseT;
   const tm = left == null ? "" : " · " + Math.max(0, Math.ceil(left)) + "s";
   $("clock").textContent = (G.phase === "day" ? "☀️ " + T("day") + " " + G.day : "🌙 " + T("night") + " " + G.day) + tm;
 }
@@ -714,14 +845,14 @@ document.addEventListener("visibilitychange", () => { if (document.hidden) { if 
 
 async function boot() {
   resize(); await loadAll(); makePats();
-  if (A.s_astro_front) { const s = A.s_astro_front, fw = s.width / 12, c = document.createElement("canvas"); c.width = fw; c.height = s.height; c.getContext("2d").drawImage(s, 0, 0, fw, s.height, 0, 0, fw, s.height); $("astroIcon").src = c.toDataURL(); }
+  if (A.s_astro_front) { const s = A.s_astro_front, fw = s.width / 12, c = document.createElement("canvas"); c.width = fw; c.height = s.height; c.getContext("2d").drawImage(s, 0, 0, fw, s.height, 0, 0, fw, s.height); astroIcon = c.toDataURL(); }
   if (!load()) newGame((Math.random() * 1e9) | 0);
   $("loading").style.display = "none";
-  const go = () => { G.paused = false; if (G.tut >= 1 && G.tut <= 5) setTut(G.tut); };
+  const go = () => { G.paused = false; setTut(G.tut); };
   if (!localStorage.getItem("iv_intro") && !/nointro/.test(location.search)) playIntro(go); else go();
   requestAnimationFrame(frame);
 }
-window.__G = () => ({ G, buildings, astros, beasts, deposits, cam, TH });
+window.__G = () => ({ G, buildings, astros, beasts, deposits, wrecks, cam, TH }); window.__open = w => openWreck(w);
 boot();
 </script>
 </body>
