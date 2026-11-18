@@ -11,8 +11,9 @@ html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:syste
 #cv{position:fixed;inset:0;width:100%;height:100%;touch-action:none;display:block}
 .hud{position:fixed;pointer-events:none;z-index:5}
 .pill{background:rgba(6,20,30,.72);border:1px solid rgba(80,230,255,.35);border-radius:14px;padding:6px 12px;font-weight:700;font-size:15px;box-shadow:0 0 12px rgba(0,200,255,.15)}
-#res{top:max(8px,env(safe-area-inset-top));inset-inline-start:10px;display:flex;gap:8px}
-#clock{top:max(8px,env(safe-area-inset-top));left:50%;transform:translateX(-50%)}
+#res{top:max(8px,env(safe-area-inset-top));inset-inline-start:10px;display:flex;gap:6px}
+#clock{top:calc(max(8px,env(safe-area-inset-top)) + 40px);left:50%;transform:translateX(-50%);font-size:13px;padding:4px 10px}
+#res .pill{font-size:14px;padding:5px 9px}
 #topR{top:max(8px,env(safe-area-inset-top));inset-inline-end:10px;display:flex;gap:8px}
 .btn{pointer-events:auto;background:rgba(6,24,36,.82);border:1px solid rgba(80,230,255,.5);color:#dff9ff;border-radius:14px;min-width:46px;height:46px;padding:0 12px;font-size:20px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;box-shadow:0 0 14px rgba(0,210,255,.18)}
 .btn:active{transform:scale(.95);background:rgba(20,70,90,.9)}
@@ -23,7 +24,7 @@ html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:syste
 #hint{bottom:max(14px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);max-width:min(560px,62vw);text-align:center;font-size:15px;line-height:1.45;display:none}
 #hint.show{display:block;animation:pop .35s}
 @keyframes pop{from{transform:translateX(-50%) scale(.9);opacity:0}to{transform:translateX(-50%) scale(1);opacity:1}}
-#toast{top:64px;left:50%;transform:translateX(-50%);font-size:15px;display:none}
+#toast{top:92px;left:50%;transform:translateX(-50%);font-size:15px;display:none}
 .panel{position:fixed;z-index:20;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,6,12,.6)}
 .panel.show{display:flex}
 .card{background:linear-gradient(160deg,rgba(8,30,44,.97),rgba(4,14,22,.97));border:1px solid rgba(80,230,255,.5);border-radius:18px;padding:18px 20px;max-width:min(92vw,620px);text-align:center;box-shadow:0 0 30px rgba(0,200,255,.25)}
@@ -72,6 +73,25 @@ html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:syste
 .upProg .cur{background:linear-gradient(180deg,#ffe58a,#d99a1a)!important}
 #hand{position:fixed;z-index:7;font-size:46px;pointer-events:none;display:none;filter:drop-shadow(0 0 10px #4ef);animation:bob .8s ease-in-out infinite alternate;transform-origin:50% 0}
 @keyframes bob{from{margin-top:0}to{margin-top:16px}}
+#buildP .card,#resP .card{max-height:90vh;overflow-y:auto}
+#buildP .item{width:124px;padding:6px;position:relative}
+#buildP .item img{height:66px}
+#buildP .item b{font-size:13px}
+#buildP .item span{font-size:12px}
+.item .lk{display:block;font-size:11px;color:#ffb27a;margin-top:2px;line-height:1.25}
+.item.lock img{filter:grayscale(1) brightness(.6)}
+#resP .card{width:min(94vw,640px);text-align:start}
+.rs{display:flex;align-items:center;gap:10px;background:rgba(10,40,56,.85);border:1px solid rgba(80,230,255,.3);border-radius:12px;padding:8px 10px;margin:6px 0}
+.rs .ic{font-size:26px;width:34px;text-align:center}
+.rs .tx{flex:1}
+.rs .tx b{display:block;font-size:15px}
+.rs .tx span{font-size:13px;color:#a9dbe6}
+.rs .tx .bar{height:8px;border-radius:4px;background:rgba(0,0,0,.5);margin-top:4px;overflow:hidden}
+.rs .tx .bar i{display:block;height:100%;background:linear-gradient(90deg,#ffe58a,#d99a1a)}
+.rs .go{pointer-events:auto;background:linear-gradient(180deg,#19c3e6,#0a7fa3);border-radius:10px;padding:8px 12px;font-weight:800;font-size:14px;cursor:pointer;white-space:nowrap}
+.rs .go.dim{opacity:.45}
+.rs.done{opacity:.6}
+#upAct{background:linear-gradient(180deg,#9b6bff,#5a2fc0)}
 #loading{position:fixed;inset:0;z-index:50;background:#000;display:flex;align-items:center;justify-content:center;font-size:18px;color:#7ff0ff}
 </style>
 </head>
@@ -79,7 +99,7 @@ html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:syste
 <canvas id="cv"></canvas>
 <canvas id="mini" width="130" height="130"></canvas>
 
-<div id="res" class="hud"><div class="pill" id="crys">💎 0</div><div class="pill" id="pow">⚡ 0</div><div class="pill" id="crew">👨‍🚀 0</div></div>
+<div id="res" class="hud"><div class="pill" id="crys">💎 0</div><div class="pill" id="pow">⚡ 0</div><div class="pill" id="crew">👨‍🚀 0</div><div class="pill" id="life"></div></div>
 <div id="clock" class="hud pill">☀️</div>
 <div id="topR" class="hud"><div class="btn" id="bHelp">💡</div><div class="btn" id="bMenu">⚙️</div></div>
 <div id="acts" class="hud">
@@ -107,7 +127,13 @@ html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:syste
   <div class="upHead"><b id="upName"></b><div class="upLv"><span class="lv" id="upL1"></span><span>➜</span><span class="lv nx" id="upL2"></span></div></div>
   <div class="upBody"><div class="upPic"><img id="upImg"></div><div class="upStats" id="upStats"></div></div>
   <div class="upProg" id="upProg"></div>
-  <div class="upFoot"><div class="upCost" id="upCost"></div><div class="upBtns"><div class="big" id="upGo"></div><div class="big gold" id="upNow"></div><div class="big alt" id="upNo" data-t="close"></div></div></div>
+  <div class="upFoot"><div class="upCost" id="upCost"></div><div class="upBtns"><div class="big" id="upAct"></div><div class="big" id="upGo"></div><div class="big gold" id="upNow"></div><div class="big alt" id="upNo" data-t="close"></div></div></div>
+</div></div>
+
+<div class="panel" id="resP"><div class="card">
+  <h2 id="resT"></h2>
+  <div id="resList"></div>
+  <div style="text-align:center"><div class="big alt" id="resClose" data-t="close"></div></div>
 </div></div>
 
 <div class="panel" id="menuP"><div class="card">
@@ -163,9 +189,9 @@ const TX = {
   t8: ["ابنِ سكن الطاقم ليزيد عدد الرواد", "Build the Crew Quarters to grow your crew"],
   t9: ["الكائنات تهاجم بالليل! اجمع 100 كريستال وابنِ برج الليزر", "Creatures attack at night! Collect 100 crystals and build the Laser Tower"],
   t10: ["الليل قادم! أبراج الليزر تدافع تلقائياً. البناء متاح الآن من زر 🏗️", "Night is coming! Laser towers fire automatically. Build more from the 🏗️ button"],
-  tdone: ["أنت الآن القائد. اصمد 5 ليالٍ لتأمين القاعدة", "You are in command now. Survive 5 nights to secure the base"],
-  help: ["حدد الرواد واضغط على الكريستال للجمع. ابنِ أبراج ليزر قبل الليل. درّب رواداً جدداً من قائمة البناء. لا يمكن المشي على الماء أو الجبال.",
-         "Select astronauts and tap crystals to mine. Build laser towers before night. Train more astronauts from the Build menu. Water and mountains block movement."],
+  tdone: ["أنت الآن القائد. اصمد 5 ليالٍ، وحدّث مركز القيادة لتفتح مباني جديدة 🔓", "You are in command now. Survive 5 nights, and upgrade the Command Center to unlock new buildings 🔓"],
+  help: ["حدد الرواد واضغط على الكريستال للجمع، أو على حيوان لصيده. ابنِ أبراج ليزر قبل الليل. الطاقم يحتاج هواء وخضار وبروتين. حدّث المباني لتفتح أبحاثاً ومباني جديدة.",
+         "Select astronauts and tap crystals to mine, or tap an animal to hunt it. Build laser towers before night. The crew needs air, vegetables and protein. Upgrade buildings to unlock research and new buildings."],
   noC: ["الكريستال لا يكفي", "Not enough crystals"], busy: ["طائرات البناء مشغولة بمبنى آخر", "Construction drones are busy"],
   bad: ["لا يمكن البناء هنا", "Can't build here"], placeT: ["اضغط على الخريطة لاختيار المكان ثم ✔", "Tap the map to choose a spot, then ✔"],
   maxA: ["وصلت للحد الأقصى من الرواد", "Crew limit reached"], newA: ["رائد فضاء جديد انضم للطاقم", "A new astronaut joined the crew"],
@@ -177,6 +203,24 @@ const TX = {
   winM: ["صمدت 5 ليالٍ على كوكب غريب. إذا أعجبتك اللعبة، قيّمها على جوجل بلاي، فهذا يساعدنا كثيراً ⭐", "You survived 5 nights on an alien world. If you enjoy the game, please rate it on Google Play, it really helps us ⭐"],
   rate: ["⭐ قيّم اللعبة", "⭐ Rate the game"], cont: ["متابعة اللعب", "Keep playing"],
   sure: ["بدء لعبة جديدة؟ سيضيع التقدم الحالي.", "Start a new game? Current progress will be lost."], yes: ["نعم", "Yes"], no: ["لا", "No"],
+  water: ["محطة المياه", "Water Station"], research: ["معمل الأبحاث", "Research Lab"], agrilab: ["معمل الأبحاث الزراعية", "Agricultural Lab"],
+  farm: ["مزرعة الحيوانات", "Livestock Farm"], transformer: ["محوّل الطاقة", "Power Transformer"], nuclear: ["محطة نووية", "Nuclear Plant"], factory: ["مصنع السفن والروبوتات", "Ship & Robot Factory"],
+  d_water: ["تُبنى بجوار البحيرات فقط. تسقي الصوب والمزرعة فيزيد الأكل.", "Built next to lakes only. Irrigates crops and the farm for more food."],
+  d_research: ["يطوّر تقنيات جديدة: مبانٍ جديدة وليزر أقوى ودروع.", "Develops new technology: new buildings, stronger lasers and armor."],
+  d_agrilab: ["يطوّر محاصيل جديدة ويزيد إنتاج الأكل والحيوانات.", "Develops new crops and boosts food and livestock."],
+  d_farm: ["قبة لتربية الحيوانات للبروتين. كل حيوان يستهلك أكسجين.", "A dome that raises animals for protein. Every animal uses oxygen."],
+  d_transformer: ["يرفع كفاءة الألواح الشمسية، ولازم قبل المحطة النووية.", "Boosts solar efficiency, and is required before a nuclear plant."],
+  d_nuclear: ["طاقة ضخمة ثابتة ليلاً ونهاراً.", "Huge, steady power day and night."],
+  d_factory: ["يصنع روبوتات الدفاع، ولاحقاً سفن النقل.", "Builds defense robots, and later transport ships."],
+  s_irr: ["زيادة الأكل", "Food bonus"], s_rspd: ["سرعة الأبحاث", "Research speed"], s_slots: ["أماكن الحيوانات", "Animal slots"], s_solar: ["كفاءة الشمسية", "Solar boost"], s_robots: ["عدد الروبوتات", "Robots"],
+  lock: ["🔒 يتطلب", "🔒 Needs"], once: ["مسموح بواحد فقط", "Only one allowed"], nearW: ["لازم بجوار بحيرة 💧", "Must be next to a lake 💧"],
+  unl: ["🔓 متاح الآن: ", "🔓 Unlocked: "], rsch: ["🔬 الأبحاث", "🔬 Research"], rStart: ["ابدأ", "Start"], rDone: ["تم ✔", "Done ✔"], rBusy: ["المعمل مشغول ببحث آخر", "The lab is busy with another project"],
+  rFin: ["🔬 اكتمل البحث: ", "🔬 Research complete: "], rLab: ["أبحاث", "Research"],
+  robot: ["روبوت دفاع", "Defense Robot"], mkRob: ["🤖 روبوت", "🤖 Robot"], robMax: ["وصلت لأقصى عدد روبوتات، حدّث المصنع", "Robot limit reached, upgrade the factory"],
+  robBusy: ["المصنع يصنع روبوت الآن", "The factory is already building a robot"], robNew: ["🤖 روبوت دفاع جديد جاهز", "🤖 A new defense robot is ready"], robLost: ["🤖 تم تدمير روبوت", "🤖 A robot was destroyed"],
+  capt: ["+1 🐐 للمزرعة", "+1 🐐 to the farm"], meat: ["+🍖 لحم للطاقم", "+🍖 meat for the crew"], huntH: ["حدد رواد الفضاء ثم اضغط على الحيوان لصيده", "Select astronauts, then tap the animal to hunt it"],
+  needBld: ["ابنِ ", "Build a "], needBld2: [" لزيادة الطاقم", " to grow your crew"],
+  air: ["هواء", "Air"], veg: ["خضار", "Veg"], prot: ["بروتين", "Protein"],
   subs: [["الأرض تختنق... والموارد تنفد", "حتى اخترع العلماء محرك الالتواء", "ولأول مرة، أصبح السفر إلى النجوم ممكنًا", "الوجهة: كوكب بعيد... قد يكون موطننا الجديد", "لكن الرحلة لم تنتهِ كما خُطط لها..."],
          ["Earth is suffocating... and its resources are running out", "Until scientists invented the warp drive", "For the first time, travel to the stars became possible", "The destination: a distant planet... perhaps our new home", "But the journey did not end as planned..."]]
 };
@@ -187,7 +231,8 @@ const PLAY_URL = "https://play.google.com/store/apps/details?id=com.interplaneta
 // ============================================================ assets
 const A = {};
 const IMG = ["tex_ground", "tex_sand", "tex_grass", "tex_cliff", "tex_water", "b_command", "b_tower", "b_power", "b_oxygen", "b_quarters", "b_greenhouse", "b_wreck", "p_tree", "p_crystal", "p_rock",
-  "s_astro_front", "s_astro_back", "s_astro_side", "s_beast_front", "s_beast_side"];
+  "s_astro_front", "s_astro_back", "s_astro_side", "s_beast_front", "s_beast_side",
+  "b_water", "b_research", "b_agrilab", "b_farm", "b_transformer", "b_nuclear", "b_factory", "s_robot_front", "s_robot_back", "s_robot_side", "s_deer_a", "s_deer_b"];
 function loadAll() {
   return Promise.all(IMG.map(n => new Promise(res => {
     const i = new Image();
@@ -196,7 +241,7 @@ function loadAll() {
     i.src = "assets/" + n + (n.startsWith("tex_") ? ".jpg" : ".png");
   })));
 }
-const SHEET = { s_astro_front: 12, s_astro_back: 12, s_astro_side: 12, s_beast_front: 12, s_beast_side: 12 };
+const SHEET = { s_astro_front: 12, s_astro_back: 12, s_astro_side: 12, s_beast_front: 12, s_beast_side: 12, s_robot_front: 12, s_robot_back: 12, s_robot_side: 12, s_deer_a: 12, s_deer_b: 12 };
 
 // ============================================================ helpers
 const cv = document.getElementById("cv"), ctx = cv.getContext("2d");
@@ -389,8 +434,8 @@ function findPath(sx, sy, tx, ty, ignoreOcc) {
 function los(a, b, ok) { const d = Math.hypot(b.x - a.x, b.y - a.y), n = Math.ceil(d / (CELL / 3)); for (let i = 1; i < n; i++) { const t = i / n, [x, y] = cellOf(lerp(a.x, b.x, t), lerp(a.y, b.y, t)); if (!ok(x, y)) return false; } return true; }
 
 // ============================================================ game state
-const G = { t: 0, day: 1, phase: "day", phaseT: 0, crystals: 150, paused: true, over: false, won: false, tut: 0, maxCrew: 3, power: { prod: 0, use: 0, k: 1 } };
-let buildings = [], astros = [], beasts = [], deposits = [], props = [], fx = [], lasers = [], wrecks = [];
+const G = { t: 0, day: 1, phase: "day", phaseT: 0, crystals: 150, paused: true, over: false, won: false, tut: 0, maxCrew: 3, power: { prod: 0, use: 0, k: 1 }, res: [], rc: {}, animals: 0, meat: 0, robT: 0, breedT: 0, cap: {} };
+let buildings = [], astros = [], beasts = [], deposits = [], props = [], fx = [], lasers = [], wrecks = [], robots = [], deer = [], herds = [];
 const DAY_LEN = 150, NIGHT_LEN = 75, WIN_NIGHTS = 5;
 // building table: sprite width in the world, hit points, footprint radius, cost, and where the building sits inside its Flow video
 const BT = {
@@ -399,9 +444,44 @@ const BT = {
   oxygen: { img: "b_oxygen", w: 220, hp: 450, r: 80, cost: 50, vid: { cx: .5, cy: .47, bw: .5, sbw: .68, scy: .45 } },
   greenhouse: { img: "b_greenhouse", w: 250, hp: 450, r: 90, cost: 50, vid: { cx: .5, cy: .5, bw: .58, sbw: .83, scy: .5 } },
   quarters: { img: "b_quarters", w: 220, hp: 450, r: 80, cost: 60, vid: { cx: .5, cy: .52, bw: .47, sbw: .62, scy: .5 } },
-  tower: { img: "b_tower", w: 150, hp: 500, r: 46, cost: 100, range: 310, dps: 26, vid: { cx: .5, cy: .52, bw: .375, sbw: .62, scy: .48 } }
+  tower: { img: "b_tower", w: 150, hp: 500, r: 46, cost: 100, range: 310, dps: 26, vid: { cx: .5, cy: .52, bw: .375, sbw: .62, scy: .48 } },
+  water: { img: "b_water", w: 230, hp: 450, r: 78, cost: 70, pw: 4, vid: { cx: .55, cy: .4993, bw: .6, sbw: 1, scy: .5 } },
+  research: { img: "b_research", w: 240, hp: 500, r: 84, cost: 150, pw: 10, one: 1, vid: { cx: .5065, cy: .4811, bw: .6105, sbw: 1, scy: .5 } },
+  farm: { img: "b_farm", w: 260, hp: 500, r: 90, cost: 120, pw: 6, vid: { cx: .5015, cy: .5085, bw: .7776, sbw: 1, scy: .5 } },
+  agrilab: { img: "b_agrilab", w: 260, hp: 500, r: 90, cost: 140, pw: 8, one: 1, vid: { cx: .5058, cy: .4948, bw: .7762, sbw: 1, scy: .5 } },
+  transformer: { img: "b_transformer", w: 270, hp: 550, r: 92, cost: 160, one: 1, vid: { cx: .4971, cy: .5326, bw: .859, sbw: 1, scy: .5 } },
+  nuclear: { img: "b_nuclear", w: 260, hp: 700, r: 92, cost: 400, one: 2, vid: { cx: .5015, cy: .4701, bw: .6701, sbw: 1, scy: .5 } },
+  factory: { img: "b_factory", w: 290, hp: 600, r: 100, cost: 220, pw: 15, one: 1, vid: { cx: .5008, cy: .491, bw: .825, sbw: 1, scy: .5 } }
 };
-const ASTRO_COST = 80;
+const ASTRO_COST = 80, ROBOT_COST = 120, ROBOT_TIME = 40;
+// research projects: lab, icon, [ar,en] name, [ar,en] effect, cost, seconds, prerequisite projects
+const RES = {
+  agro: { lab: "research", ic: "🌱", n: ["علم الزراعة", "Agronomy"], d: ["يفتح معمل الأبحاث الزراعية", "Unlocks the Agricultural Lab"], c: 120, s: 120 },
+  grid: { lab: "research", ic: "🔌", n: ["شبكة الطاقة", "Power Grid"], d: ["يفتح محوّل الطاقة", "Unlocks the Power Transformer"], c: 150, s: 150 },
+  laser2: { lab: "research", ic: "🔫", n: ["ليزر مُركّز", "Focused Lasers"], d: ["أبراج وروبوتات أقوى 25%", "Towers and robots +25% damage"], c: 180, s: 180 },
+  capture: { lab: "research", ic: "🕸️", n: ["شبكة الصعق", "Stun Nets"], d: ["صيد الحيوانات حية ونقلها للمزرعة", "Catch animals alive for the farm"], c: 140, s: 150 },
+  robo: { lab: "research", ic: "🤖", n: ["الروبوتات", "Robotics"], d: ["يفتح مصنع السفن والروبوتات", "Unlocks the Ship & Robot Factory"], c: 200, s: 180, req: ["grid"] },
+  armor: { lab: "research", ic: "🛡️", n: ["سبائك مقوّاة", "Reinforced Alloy"], d: ["كل المباني أقوى 25%", "All buildings +25% durability"], c: 220, s: 200 },
+  fission: { lab: "research", ic: "☢️", n: ["الانشطار النووي", "Nuclear Fission"], d: ["يفتح المحطة النووية", "Unlocks the Nuclear Plant"], c: 300, s: 240, req: ["grid"] },
+  crop1: { lab: "agrilab", ic: "🥔", n: ["بطاطس فضائية", "Alien Potatoes"], d: ["خضار +30%", "Vegetables +30%"], c: 120, s: 120 },
+  feed: { lab: "agrilab", ic: "🌾", n: ["علف الحيوانات", "Animal Feed"], d: ["+2 مكان حيوانات لكل مستوى مزرعة", "+2 animal slots per farm level"], c: 150, s: 150 },
+  crop2: { lab: "agrilab", ic: "🌿", n: ["طحالب مضيئة", "Glow Algae"], d: ["خضار +30%", "Vegetables +30%"], c: 180, s: 180, req: ["crop1"] },
+  breed: { lab: "agrilab", ic: "🐣", n: ["تكاثر سريع", "Fast Breeding"], d: ["الحيوانات تتكاثر أسرع مرتين", "Animals breed twice as fast"], c: 160, s: 160, req: ["feed"] },
+  crop3: { lab: "agrilab", ic: "🏗️", n: ["أبراج زراعة مائية", "Hydroponic Towers"], d: ["خضار +40%", "Vegetables +40%"], c: 260, s: 240, req: ["crop2"] }
+};
+const has = id => G.res.includes(id);
+const best = t => buildings.reduce((m, o) => o.type === t && o.built ? Math.max(m, o.lvl) : m, 0);
+// what must be true before a building type appears in the build menu
+function unlockReqs(t) {
+  const o = [];
+  if (t === "research") o.push([T("command") + " " + T("lvl") + " 2", best("command") >= 2]);
+  if (t === "farm") o.push([T("water"), count("water") > 0]);
+  if (t === "agrilab") o.push([RES.agro.n[AR ? 0 : 1], has("agro")]);
+  if (t === "transformer") o.push([RES.grid.n[AR ? 0 : 1], has("grid")]);
+  if (t === "nuclear") { o.push([RES.fission.n[AR ? 0 : 1], has("fission")]); o.push([T("transformer"), count("transformer") > 0]); }
+  if (t === "factory") o.push([RES.robo.n[AR ? 0 : 1], has("robo")]);
+  return o;
+}
 // tutorial: step -> which wreck the hand points at
 const TUT_WRECK = { 1: "command", 2: "power", 3: "oxygen", 4: "greenhouse", 8: "quarters", 9: "tower" };
 
@@ -419,16 +499,28 @@ const upTime = b => 180 * b.lvl; // 3, 6, 9, 12 minutes
 function upReqs(b) {
   const out = [], next = b.lvl + 1, c = buildings.find(o => o.type === "command" && o.built);
   if (b.type !== "command") { if (!c || c.lvl < next) out.push([T("command") + " " + T("lvl") + " " + next, false]); return out; }
-  const best = t => buildings.reduce((m, o) => o.type === t && o.built ? Math.max(m, o.lvl) : m, 0);
-  const need = { 2: [["quarters", 1], ["tower", 1]], 3: [["power", 2], ["oxygen", 2], ["greenhouse", 2]], 4: [["power", 3], ["quarters", 3], ["tower", 3]], 5: [["power", 4], ["oxygen", 4], ["greenhouse", 4], ["tower", 4]] }[next] || [];
+    const need = { 2: [["quarters", 1], ["tower", 1]], 3: [["power", 2], ["oxygen", 2], ["greenhouse", 2]], 4: [["power", 3], ["quarters", 3], ["tower", 3], ["transformer", 1]], 5: [["power", 4], ["oxygen", 4], ["greenhouse", 4], ["tower", 4], ["nuclear", 1]] }[next] || [];
   for (const [t, l] of need) out.push([T(t) + " " + T("lvl") + " " + l, best(t) >= l]);
   return out;
 }
 const reqsOk = b => upReqs(b).every(r => r[1]);
 const fmt = s => Math.floor(s / 60) + ":" + String(Math.floor(s % 60)).padStart(2, "0");
-function setLvl(b, l) { b.lvl = l; const k = 1 + .5 * (l - 1), f = b.hp / b.max; b.max = Math.round(BT[b.type].hp * k); b.hp = Math.round(b.max * f); }
-const towerDps = b => BT.tower.dps * (1 + .5 * (b.lvl - 1)), towerRange = b => BT.tower.range + 45 * (b.lvl - 1);
+function setLvl(b, l) { b.lvl = l; const k = (1 + .5 * (l - 1)) * (has("armor") ? 1.25 : 1), f = b.hp / b.max; b.max = Math.round(BT[b.type].hp * k); b.hp = Math.round(b.max * f); }
+const towerDps = b => BT.tower.dps * (1 + .5 * (b.lvl - 1)) * (has("laser2") ? 1.25 : 1), towerRange = b => BT.tower.range + 45 * (b.lvl - 1);
 function addAstro(x, y) { const a = { kind: "a", x, y, hp: 60, max: 60, path: null, job: null, carry: 0, mineT: 0, dir: "front", flip: false, anim: Math.random() * 12, moving: false, sel: false, downT: 0 }; astros.push(a); return a; }
+function addRobot(x, y) { const r = { kind: "r", x, y, hp: 220, max: 220, path: null, dir: "front", flip: false, anim: 0, moving: false, aim: null, repath: 0, post: null }; robots.push(r); return r; }
+function robotPost(i) { const c = cmd() || { x: WORLD / 2, y: WORLD / 2 }, a = i * 2.39 + .6; return { x: c.x + Math.cos(a) * 280, y: c.y + 60 + Math.sin(a) * 220 }; }
+function addDeer(h, x, y) { const d = { kind: "h", h, x, y, tx: x, ty: y, v: Math.random() < .5 ? "a" : "b", anim: Math.random() * 12, flip: Math.random() < .5, idle: Math.random() * 4, flee: 0, moving: false, s: lerp(.9, 1.1, Math.random()) }; deer.push(d); return d; }
+function makeHerds(r) {
+  herds = []; deer = []; const c = WORLD / 2; let guard = 0;
+  while (herds.length < 5 && guard++ < 4000) {
+    const a = r() * 6.283, d = lerp(900, 2300, r()), x = c + Math.cos(a) * d, y = c + Math.sin(a) * d, [i, j] = cellOf(x, y);
+    if (!reach[j * N + i] || H[j * N + i] > TH.grass || herds.some(o => Math.hypot(o.x - x, o.y - y) < 700)) continue;
+    herds.push({ x, y, n: 5, t: 0 });
+  }
+  herds.forEach((h, k) => { for (let i = 0; i < h.n; i++) spawnDeer(k); });
+}
+function spawnDeer(k) { const h = herds[k]; for (let g = 0; g < 30; g++) { const x = h.x + (Math.random() - .5) * 260, y = h.y + (Math.random() - .5) * 200, [i, j] = cellOf(x, y); if (walk[j * N + i] && reach[j * N + i] && !occ[j * N + i]) return addDeer(k, x, y); } }
 function cmd() { return buildings.find(b => b.type === "command" && b.built); }
 const count = t => buildings.filter(b => b.type === t && b.built).length;
 function addWreck(type, x, y) { const w = { kind: "w", type, x, y }; wrecks.push(w); markOcc(x, y - 30, 80, 1); return w; }
@@ -436,7 +528,7 @@ function removeWreck(w) { markOcc(w.x, w.y - 30, 80, 0); wrecks = wrecks.filter(
 
 function newGame(sd) {
   genWorld(sd);
-  buildings = []; astros = []; beasts = []; deposits = []; props = []; fx = []; lasers = []; wrecks = [];
+  buildings = []; astros = []; beasts = []; deposits = []; props = []; fx = []; lasers = []; wrecks = []; robots = [];
   const c = WORLD / 2;
   addWreck("command", c, c + 60);
   addWreck("power", c - 390, c - 110);
@@ -445,8 +537,8 @@ function newGame(sd) {
   addWreck("quarters", c + 370, c + 290);
   addWreck("tower", c + 10, c + 450);
   for (let i = 0; i < 2; i++) addAstro(c - 40 + i * 80, c + 190);
-  scatter(rng(sd ^ 0x5151));
-  Object.assign(G, { t: 0, day: 1, phase: "day", phaseT: 0, crystals: 150, over: false, won: false });
+  scatter(rng(sd ^ 0x5151)); makeHerds(rng(sd ^ 0x7a7a));
+  Object.assign(G, { t: 0, day: 1, phase: "day", phaseT: 0, crystals: 150, over: false, won: false, res: [], rc: {}, animals: 0, meat: 0, robT: 0, breedT: 0, unl: null });
   G.tut = localStorage.getItem("iv_tut") ? 99 : 1;
   if (G.tut === 99) { // returning players skip the guided start: everything from the wrecks is buildable straight away
   }
@@ -467,7 +559,8 @@ function scatter(r) {
 // ============================================================ save / load
 function save() {
   const s = {
-    v: 2, seed, day: G.day, crystals: G.crystals, tut: G.tut,
+    v: 3, seed, day: G.day, crystals: G.crystals, tut: G.tut, res: G.res, rc: G.rc, an: G.animals, meat: G.meat | 0, rb: robots.length, robT: G.robT | 0,
+    hd: herds.map(h => [h.x | 0, h.y | 0, deer.filter(d => d.h === herds.indexOf(h)).length]),
     b: buildings.filter(b => b.built).map(b => [b.type, b.x | 0, b.y | 0, b.hp | 0, b.lvl, Math.ceil(b.upT || 0), b.upDur || 0]),
     w: wrecks.map(w => [w.type, w.x | 0, w.y | 0]),
     a: astros.length, d: deposits.map(d => [d.x | 0, d.y | 0, d.amt | 0]), p: props.map(p => [p.type, p.x | 0, p.y | 0, +p.s.toFixed(2), p.flip ? 1 : 0])
@@ -476,15 +569,18 @@ function save() {
 }
 function load() {
   let s; try { s = JSON.parse(localStorage.getItem("iv_save") || "null"); } catch (e) { }
-  if (!s || s.v !== 2) return false;
+  if (!s || (s.v !== 2 && s.v !== 3)) return false;
   genWorld(s.seed);
-  buildings = []; astros = []; beasts = []; fx = []; lasers = []; wrecks = [];
+  buildings = []; astros = []; beasts = []; fx = []; lasers = []; wrecks = []; robots = [];
+  G.res = s.res || []; G.rc = s.rc || {}; G.animals = s.an || 0; G.meat = s.meat || 0; G.robT = s.robT || 0; G.breedT = 0; G.unl = null;
   for (const [t, x, y] of s.w) addWreck(t, x, y);
   for (const [t, x, y, hp, lv, ut, ud] of s.b) { const b = addBuilding(t, x, y, true); setLvl(b, lv || 1); b.hp = Math.min(hp, b.max); if (ut > 0) { b.upT = ut; b.upDur = ud || ut; } }
   deposits = s.d.map(([x, y, amt]) => { markOcc(x, y, 30, 1); return { kind: "d", x, y, amt, max: 250 }; });
   props = s.p.map(([type, x, y, sc, f]) => { markOcc(x, y, type === "tree" ? 22 : 26, 1); return { kind: "p", type, x, y, s: sc, flip: !!f }; });
   const c = cmd() || { x: WORLD / 2, y: WORLD / 2 + 60 };
   for (let i = 0; i < s.a; i++) addAstro(c.x - 80 + (i % 4) * 50, c.y + 120 + Math.floor(i / 4) * 40);
+  for (let i = 0; i < (s.rb || 0); i++) { const p = robotPost(i); addRobot(p.x, p.y); }
+  if (s.hd) { herds = s.hd.map(([x, y]) => ({ x, y, n: 5, t: 0 })); deer = []; s.hd.forEach(([, , n], k) => { for (let i = 0; i < n; i++) spawnDeer(k); }); } else makeHerds(rng(s.seed ^ 0x7a7a));
   Object.assign(G, { day: s.day, crystals: s.crystals, phase: "day", phaseT: 0, over: false, won: false, tut: s.tut });
   cam.x = c.x; cam.y = c.y; return true;
 }
@@ -523,6 +619,12 @@ function tap(sx, sy) {
   const wk = wrecks.find(w => Math.hypot(p.x - w.x, p.y - (w.y - 40)) < 110);
   if (wk) { openWreck(wk); return; }
   const sel = selected();
+  const dr = deer.find(d => Math.hypot(p.x - d.x, p.y - (d.y - 25)) < 55);
+  if (dr) {
+    if (!sel.length) return showHint(T("huntH"), 4);
+    if (!cmd()) return toast(T("follow"));
+    sel.forEach(a => { a.job = { deer: dr }; a.path = null; a.repath = 0; }); fx.push({ t: "ring", x: dr.x, y: dr.y, c: "#fd6", life: .6 }); return;
+  }
   if (!sel.length) { const bh = buildings.find(b => b.built && p.x > b.x - b.w * .4 && p.x < b.x + b.w * .4 && p.y > b.y - b.h * .85 && p.y < b.y - b.h * .05); if (bh) openBuilding(bh); return; }
   const dep = deposits.find(d => d.amt > 0 && Math.hypot(p.x - d.x, p.y - (d.y - 20)) < 70);
   if (dep) { if (!cmd()) return toast(T("follow")); sel.forEach(a => { a.job = { dep }; goTo(a, dep.x, dep.y + 26); }); fx.push({ t: "ring", x: dep.x, y: dep.y, c: "#5ff", life: .6 }); return; }
@@ -547,18 +649,61 @@ function statsOf(type, l) {
   if (type === "oxygen") return [["🫧", T("s_air"), 5 * l, 5 * M], hp];
   if (type === "greenhouse") return [["🥬", T("s_food"), 5 * l, 5 * M], hp];
   if (type === "quarters") return [["🛏️", T("s_rooms"), 4 * l, 4 * M], hp];
+  if (type === "water") return [["💧", T("s_irr") + " %", 10 * l, 10 * M], hp];
+  if (type === "research" || type === "agrilab") return [["🔬", T("s_rspd") + " %", 100 + 10 * (l - 1), 100 + 10 * (M - 1)], hp];
+  if (type === "farm") { const sl = (4 + (has("feed") ? 2 : 0)); return [["🐐", T("s_slots"), sl * l, sl * M], hp]; }
+  if (type === "transformer") return [["☀️", T("s_solar") + " %", 15 * l, 15 * M], hp];
+  if (type === "nuclear") return [["⚡", T("s_power"), 120 * l, 120 * M], hp];
+  if (type === "factory") return [["🤖", T("s_robots"), 2 * l, 2 * M], hp];
   if (type === "tower") return [["🔫", T("s_dmg"), Math.round(BT.tower.dps * k), Math.round(BT.tower.dps * kM)], ["📡", T("s_range"), BT.tower.range + 45 * (l - 1), BT.tower.range + 45 * (M - 1)], hp];
   return [hp];
 }
 function openBuilding(b) {
   bldSel = b; wreckSel = null; const d = BT[b.type], maxed = b.lvl >= MAX_LVL;
-  $("upImg").src = "assets/" + d.img + ".png"; $("upName").textContent = T(b.type);
+  $("upImg").src = "assets/" + d.img + ".png"; $("upName").textContent = T(b.type) + (b.type === "farm" ? " · 🐐 " + G.animals : "");
   $("upL1").textContent = T("lvl") + " " + b.lvl; $("upL2").textContent = maxed ? "MAX" : T("lvl") + " " + (b.lvl + 1); $("upL2").style.display = maxed ? "none" : "";
   const cur = statsOf(b.type, b.lvl), nxt = maxed ? cur : statsOf(b.type, b.lvl + 1), side = AR ? "right" : "left";
   $("upStats").innerHTML = cur.map((r, i) => { const n = nxt[i], c = r[2] / r[3] * 100, g = (n[2] - r[2]) / r[3] * 100;
     return `<div class="st"><div class="lb"><span>${r[0]} ${r[1]}</span><span>${r[2]}${g > 0 ? ` <i>+${n[2] - r[2]}</i>` : ""}</span></div><div class="bar"><div class="cur" style="width:${c}%"></div>${g > 0 ? `<div class="nxt" style="${side}:${c}%;width:${g}%"></div>` : ""}</div></div>`; }).join("");
+  const act = { research: T("rsch"), agrilab: T("rsch"), factory: T("mkRob") + " · 💎" + ROBOT_COST }[b.type];
+  $("upAct").style.display = act ? "" : "none"; if (act) $("upAct").textContent = act;
   refreshUp(); $("upP").classList.add("show");
 }
+$("upAct").onclick = () => {
+  const b = bldSel; if (!b) return;
+  if (b.type === "factory") {
+    if (G.robT > 0) return toast(T("robBusy"));
+    if (robots.length >= 2 * best("factory")) return toast(T("robMax"));
+    if (G.crystals < ROBOT_COST) return toast(T("noC"));
+    G.crystals -= ROBOT_COST; G.robT = ROBOT_TIME; chime(700); toast("🤖 ⏱ " + fmt(ROBOT_TIME)); return;
+  }
+  $("upP").classList.remove("show"); bldSel = null; openRes(b.type);
+};
+// ---------------- research panel
+let resLab = null;
+const resDur = (id, lab) => RES[id].s * (1 - .1 * (best(lab) - 1));
+function openRes(lab) { resLab = lab; G.paused = true; $("resT").textContent = T(lab) + " · " + T("rLab"); refreshRes(); $("resP").classList.add("show"); }
+function refreshRes() {
+  if (!resLab) return; const L = $("resList"), cur = G.rc[resLab]; L.innerHTML = "";
+  for (const [id, r] of Object.entries(RES)) {
+    if (r.lab !== resLab) continue;
+    const done = has(id), miss = (r.req || []).filter(q => !has(q)), run = cur && cur[0] === id;
+    const el = document.createElement("div"); el.className = "rs" + (done ? " done" : "");
+    let right = "", sub = r.d[AR ? 0 : 1];
+    if (done) right = `<span style="color:#7f9;font-weight:800">${T("rDone")}</span>`;
+    else if (run) { sub += `<div class="bar"><i style="width:${(1 - cur[1] / cur[2]) * 100}%"></i></div>⏱ ${fmt(cur[1])}`; }
+    else if (miss.length) sub += `<br><span style="color:#ffb27a">${T("lock")}: ${miss.map(q => RES[q].n[AR ? 0 : 1]).join("، ")}</span>`;
+    else right = `<div class="go${cur || G.crystals < r.c ? " dim" : ""}">${T("rStart")} · 💎${r.c} · ⏱${fmt(resDur(id, resLab))}</div>`;
+    el.innerHTML = `<div class="ic">${r.ic}</div><div class="tx"><b>${r.n[AR ? 0 : 1]}</b><span>${sub}</span></div>${right}`;
+    const go = el.querySelector(".go"); if (go) go.onclick = () => startRes(id);
+    L.appendChild(el);
+  }
+}
+function startRes(id) {
+  const r = RES[id]; if (G.rc[r.lab]) return toast(T("rBusy")); if (G.crystals < r.c) return toast(T("noC"));
+  G.crystals -= r.c; const d = Math.round(resDur(id, r.lab)); G.rc[r.lab] = [id, d, d]; chime(800); refreshRes();
+}
+$("resClose").onclick = () => { $("resP").classList.remove("show"); resLab = null; G.paused = false; };
 function refreshUp() {
   const b = bldSel; if (!b) return; const maxed = b.lvl >= MAX_LVL, cost = upCost(b);
   if (b.upT > 0) {
@@ -602,36 +747,50 @@ $("bAll").onclick = () => { const s = astros.filter(a => !a.downT); const allOn 
 $("bNone").onclick = () => { astros.forEach(a => a.sel = false); updSelBtn(); };
 $("bBuild").onclick = () => { if (!G.paused) { G.paused = true; $("buildP").classList.add("show"); refreshBuild(); } };
 $("buildClose").onclick = () => { $("buildP").classList.remove("show"); G.paused = false; };
-const MENU = ["tower", "power", "oxygen", "greenhouse", "quarters", "astro"];
+const MENU = ["astro", "tower", "power", "oxygen", "greenhouse", "quarters", "water", "research", "farm", "agrilab", "transformer", "nuclear", "factory"];
 let astroIcon = "";
 function refreshBuild() {
   const row = $("buildRow"); row.innerHTML = "";
   for (const k of MENU) {
-    const cost = k === "astro" ? ASTRO_COST : BT[k].cost;
-    const it = document.createElement("div"); it.className = "item" + (G.crystals < cost ? " dis" : "");
-    it.innerHTML = `<img src="${k === "astro" ? astroIcon : "assets/" + BT[k].img + ".png"}"><b>${T(k === "astro" ? "astro" : k)}</b><span>💎 ${cost}</span>`;
+    const cost = k === "astro" ? ASTRO_COST : BT[k].cost, miss = k === "astro" ? [] : unlockReqs(k).filter(r => !r[1]);
+    const it = document.createElement("div"); it.className = "item" + (G.crystals < cost || miss.length ? " dis" : "") + (miss.length ? " lock" : "");
+    it.innerHTML = `<img src="${k === "astro" ? astroIcon : "assets/" + BT[k].img + ".png"}"><b>${T(k === "astro" ? "astro" : k)}</b><span>💎 ${cost}</span>` + (miss.length ? `<span class="lk">${T("lock")}: ${miss.map(r => r[0]).join("، ")}</span>` : "");
     it.onclick = () => menuPick(k); row.appendChild(it);
   }
 }
 function menuPick(k) {
   if (k === "astro") {
-    if (astros.length >= G.maxCrew) return toast(astros.length >= 3 + 4 * count("quarters") ? T("maxA") : T("needSup"));
+    if (astros.length >= G.maxCrew) return toast(astros.length >= G.cap.q ? T("maxA") : T("needSup"));
     if (G.crystals < ASTRO_COST) return toast(T("noC"));
     G.crystals -= ASTRO_COST; const c = cmd(); const a = addAstro(c.x, c.y + 110); goTo(a, c.x + (Math.random() - .5) * 160, c.y + 170); toast(T("newA")); chime(990); refreshBuild(); return;
   }
+  const miss = unlockReqs(k).filter(r => !r[1]); if (miss.length) return toast(T("lock") + ": " + miss.map(r => r[0]).join("، "));
+  if (BT[k].one && count(k) >= BT[k].one) return toast(T("once"));
   if (G.crystals < BT[k].cost) return toast(T("noC"));
   if (buildings.some(b => !b.built)) return toast(T("busy"));
   $("buildP").classList.remove("show"); G.paused = false;
-  const c = cmd(); ghost = { type: k, x: c.x + 300, y: c.y + 60 }; $("place").classList.add("show"); toast(T("placeT"));
+  const c = cmd(); ghost = { type: k, x: c.x + 300, y: c.y + 60 }; const sp = findSpot(k); if (sp) { ghost.x = sp.x; ghost.y = sp.y; G.focus = { x: sp.x, y: sp.y - 60, t: 1.2 }; }
+  $("place").classList.add("show"); toast(k === "water" ? T("nearW") : T("placeT"));
 }
 function ghostOk() {
   if (!ghost) return false; const d = BT[ghost.type], im = A[d.img], h = d.w * im.height / im.width, fy = ghost.y - h * .18;
   const [a, b] = cellOf(ghost.x - d.r, fy - d.r), [c2, d2] = cellOf(ghost.x + d.r, fy + d.r);
   for (let j = b; j <= d2; j++) for (let i = a; i <= c2; i++) if (Math.hypot((i + .5) * CELL - ghost.x, (j + .5) * CELL - fy) < d.r && (!free(i, j) || !reach[j * N + i])) return false;
+  if (ghost.type === "water" && !nearLake(ghost.x, fy, d.r + 45)) return false;
   return true;
 }
+function nearLake(x, y, r) { const [a, b] = cellOf(x - r, y - r), [c, d] = cellOf(x + r, y + r); for (let j = b; j <= d; j++) for (let i = a; i <= c; i++) if (H[j * N + i] < TH.water && Math.hypot((i + .5) * CELL - x, (j + .5) * CELL - y) < r) return true; return false; }
+// first valid spot around the command center, spiralling outwards
+function findSpot(type) {
+  const c = cmd(); if (!c) return null; const save0 = ghost;
+  for (let rad = 300; rad < 2400; rad += 70) for (let k = 0, n = Math.ceil(rad / 40); k < n; k++) {
+    const a = k / n * 6.283 + rad * .01; ghost = { type, x: c.x + Math.cos(a) * rad, y: c.y + 60 + Math.sin(a) * rad * .85 };
+    if (ghostOk()) { const g = ghost; ghost = save0; return { x: g.x, y: g.y }; }
+  }
+  ghost = save0; return null;
+}
 $("pOk").onclick = () => {
-  if (!ghostOk()) return toast(T("bad"));
+  if (!ghostOk()) return toast(ghost.type === "water" ? T("nearW") : T("bad"));
   G.crystals -= BT[ghost.type].cost; const b = addBuilding(ghost.type, ghost.x, ghost.y, false); startConstruction(b);
   ghost = null; $("place").classList.remove("show");
 };
@@ -697,16 +856,41 @@ function update(dt) {
   if (G.focus) { const k = Math.min(1, dt * 3); cam.x = lerp(cam.x, G.focus.x, k); cam.y = lerp(cam.y, G.focus.y, k); clampCam(); if ((G.focus.t -= dt) <= 0) G.focus = null; }
   // power & life support
   const night = G.phase === "night";
-  G.power.prod = sumLvl("power") * 30 * (night ? .5 : 1); G.power.use = (cmd() ? 5 : 0) + sumLvl("tower") * 8;
+  const solar = sumLvl("power") * 30 * (1 + .15 * sumLvl("transformer")), nuke = count("transformer") ? sumLvl("nuclear") * 120 : 0;
+  G.power.prod = solar * (night ? .5 : 1) + nuke;
+  G.power.use = (cmd() ? 5 : 0) + sumLvl("tower") * 8 + robots.length * 3 + buildings.reduce((n, b) => n + (b.built && BT[b.type].pw ? BT[b.type].pw : 0), 0);
   G.power.k = G.power.use <= G.power.prod ? 1 : Math.max(.35, G.power.prod / Math.max(1, G.power.use));
-  const capQ = 3 + 4 * sumLvl("quarters"), capO = 3 + 5 * sumLvl("oxygen"), capG = 3 + 5 * sumLvl("greenhouse");
-  G.maxCrew = cmd() ? Math.min(capQ, capO, capG, 24) : 3;
+  // life support: rooms, air (shared with farm animals), vegetables and protein
+  const wl = Math.min(5, sumLvl("water")), slots = (4 + (has("feed") ? 2 : 0)) * sumLvl("farm");
+  G.animals = Math.min(G.animals, slots);
+  const vegK = (1 + .3 * has("crop1") + .3 * has("crop2") + .4 * has("crop3")) * (1 + .1 * wl);
+  const airTot = 3 + 6 * sumLvl("oxygen");
+  const capQ = 3 + 4 * sumLvl("quarters"), capO = Math.floor(airTot - .5 * G.animals), capG = 3 + Math.floor(5 * sumLvl("greenhouse") * vegK);
+  const capP = 5 + Math.floor(1.5 * G.animals * (1 + .1 * wl)) + Math.floor(G.meat / 15);
+  G.cap = { q: capQ, o: capO, g: capG, p: capP, slots, airTot };
+  G.maxCrew = cmd() ? Math.min(capQ, capO, capG, capP, 30) : 3;
+  // animals breed while there is room in the farm and air to spare for the crew
+  if (slots && G.animals < slots) { G.breedT += dt * (has("breed") ? 2 : 1); if (G.breedT >= 45) { G.breedT = 0; if (airTot - .5 * (G.animals + 1) >= astros.length) { G.animals++; const f = buildings.find(b => b.type === "farm" && b.built); if (f) fx.push({ t: "txt", x: f.x, y: f.y - f.h * .8, s: "+1 🐐", life: 1.4 }); } } }
+  if (G.meat > 0) G.meat = Math.max(0, G.meat - dt / 8);
+  // research and robot production
+  for (const lab in G.rc) { const r = G.rc[lab]; if (!count(lab)) continue; if ((r[1] -= dt) <= 0) { delete G.rc[lab]; G.res.push(r[0]); chime(1400); toast(T("rFin") + RES[r[0]].n[AR ? 0 : 1]); if (r[0] === "armor") buildings.forEach(b => setLvl(b, b.lvl)); save(); } }
+  if (resLab && G.t - (G.resRef || 0) > .5) { G.resRef = G.t; refreshRes(); }
+  if (G.robT > 0 && count("factory") && (G.robT -= dt) <= 0) { G.robT = 0; const f = buildings.find(b => b.type === "factory" && b.built); const r = addRobot(f.x, f.y + 20); r.post = null; toast(T("robNew")); chime(1100); save(); }
+  // newly unlocked buildings
+  if (G.tut > 9 && (G.unlT = (G.unlT || 0) - dt) <= 0) {
+    G.unlT = 1; const now = MENU.filter(k => k !== "astro" && unlockReqs(k).every(r => r[1]));
+    if (G.unl) for (const k of now) if (!G.unl.includes(k)) { toast(T("unl") + T(k)); chime(1200); }
+    G.unl = now;
+  }
   // which building should ask for an upgrade
   G.need = null; G.needB = null;
   if (G.tut > 9) {
-    const crew = astros.length, lim = [["quarters", capQ], ["oxygen", capO], ["greenhouse", capG]].sort((a, b) => a[1] - b[1])[0];
+    const crew = astros.length, lim = [["quarters", capQ], ["oxygen", capO], ["greenhouse", capG], ["farm", capP]].sort((a, b) => a[1] - b[1])[0];
     if (G.power.use > G.power.prod / (night ? .5 : 1) * .9) G.need = "power";
     else if (crew >= G.maxCrew - 1) G.need = lim[0];
+    else if (slots && G.animals < slots && airTot - .5 * (G.animals + 1) < crew) G.need = "oxygen";
+    if (G.need === "farm" && !count("water")) G.need = "water";
+    if (G.need && !count(G.need)) { if (G.lastNeed !== "b_" + G.need && unlockReqs(G.need).every(r => r[1])) { G.lastNeed = "b_" + G.need; toast(T("needBld") + T(G.need) + T("needBld2")); } G.need = null; }
     if (G.need) { const cand = buildings.filter(b => b.type === G.need && b.built && b.lvl < MAX_LVL && !b.upT).sort((a, b) => a.lvl - b.lvl)[0]; G.needB = cand || null; if (!cand) G.need = null; else if (!reqsOk(cand)) { const c2 = cmd(); if (c2 && c2.lvl < MAX_LVL && !c2.upT) { G.needB = c2; G.need = "command"; } } else if (G.lastNeed !== G.need) { G.lastNeed = G.need; toast(T(G.need) + T("needUp")); } }
     else G.lastNeed = null;
   }
@@ -750,6 +934,13 @@ function update(dt) {
     if (a.downT) { a.downT -= dt; if (a.downT <= 0 && c) { a.downT = 0; a.hp = a.max; a.x = c.x; a.y = c.y + 110; a.path = null; } continue; }
     let moving = followPath(a, 78, dt);
     const j = a.job;
+    if (j && j.deer) {
+      const d = j.deer;
+      if (!deer.includes(d)) a.job = null;
+      else if (Math.hypot(a.x - d.x, a.y - d.y) < 55) { a.path = null; catchDeer(d); }
+      else if ((a.repath = (a.repath || 0) - dt) <= 0) { a.repath = .7; goTo(a, d.x, d.y); if (!a.path && (j.fail = (j.fail || 0) + 1) > 3) a.job = null; }
+      a.moving = moving; if (moving) a.anim += dt * 13; continue;
+    }
     if (j && !a.path) {
       if (j.back) { // deliver
         if (c && Math.hypot(a.x - c.x, a.y - (c.y + 30)) < 200) { G.crystals += a.carry; a.carry = 0; j.back = false; fx.push({ t: "txt", x: a.x, y: a.y - 70, s: "+10 💎", life: 1.2 }); if (j.dep.amt > 0) goTo(a, j.dep.x, j.dep.y + 26); else a.job = null; }
@@ -760,6 +951,21 @@ function update(dt) {
     }
     a.moving = moving; if (moving) a.anim += dt * 13;
   }
+  // wild herds
+  for (const d of deer) {
+    const h = herds[d.h]; let near = null, nd = 150;
+    for (const a of astros) { if (a.downT) continue; const k = dist(a, d); if (k < nd) { nd = k; near = a; } }
+    if (near && d.flee <= 0 && Math.random() < dt * 2) { d.flee = 2.2; d.idle = 0; const an = Math.atan2(d.y - near.y, d.x - near.x); d.tx = d.x + Math.cos(an) * 170; d.ty = d.y + Math.sin(an) * 170; }
+    let sp = 20;
+    if (d.flee > 0) { d.flee -= dt; sp = 50; }
+    else if (d.idle > 0) { d.idle -= dt; d.moving = false; continue; }
+    const dx = d.tx - d.x, dy = d.ty - d.y, L = Math.hypot(dx, dy);
+    if (L < 4) { d.idle = 2 + Math.random() * 5; d.tx = h.x + (Math.random() - .5) * 360; d.ty = h.y + (Math.random() - .5) * 280; d.moving = false; continue; }
+    const nx = d.x + dx / L * sp * dt, ny = d.y + dy / L * sp * dt, [ci, cj] = cellOf(nx, ny);
+    if (walk[cj * N + ci] && !occ[cj * N + ci]) { d.x = nx; d.y = ny; d.moving = true; d.anim += dt * (d.flee > 0 ? 14 : 8); if (Math.abs(dx) > 2) d.flip = dx < 0; }
+    else { d.tx = d.x; d.ty = d.y; d.flee = 0; }
+  }
+  herds.forEach((h, k) => { if (deer.filter(d => d.h === k).length < h.n) { h.t += dt; if (h.t >= 90) { h.t = 0; spawnDeer(k); } } });
   // beasts
   for (const e of beasts) {
     if (e.flee) { e.alpha -= dt / 1.5; continue; }
@@ -769,6 +975,7 @@ function update(dt) {
       let best = c, bd = c ? dist(e, c) : 1e9;
       for (const b of buildings) { const d = dist(e, b) - 80; if (d < bd) { bd = d; best = b; } }
       for (const a of astros) { if (a.downT) continue; const d = dist(e, a); if (d < 320 && d < bd) { bd = d; best = a; } }
+      for (const r of robots) { const d = dist(e, r); if (d < 320 && d < bd) { bd = d; best = r; } }
       if (best !== e.tgt || e.repath <= 0) { e.tgt = best; if (best) e.path = findPath(e.x, e.y, best.x, best.y, true); e.repath = 2.5; }
     }
     const t = e.tgt; if (!t) continue;
@@ -786,12 +993,33 @@ function update(dt) {
     if (!tg || tg.hp <= 0 || tg.flee || dist(tg, b) > rng2) { tg = null; let bd = rng2; for (const e of beasts) { if (e.flee) continue; const k = dist(e, b); if (k < bd) { bd = k; tg = e; } } if (tg && tg !== b.aim) zap(); b.aim = tg; }
     if (tg) { tg.hp -= towerDps(b) * G.power.k * dt; lasers.push([b.x - b.w * .22, b.y - b.h * .78, tg.x, tg.y - 30, G.power.k]); if (tg.hp <= 0) { fx.push({ t: "boom", x: tg.x, y: tg.y - 30, life: .6 }); G.crystals += 5; fx.push({ t: "txt", x: tg.x, y: tg.y - 60, s: "+5 💎", life: 1 }); } }
   }
+  // defense robots: guard their post, chase creatures that come close
+  robots.forEach((r, i) => {
+    if (!r.post || r.postI !== i) { r.post = robotPost(i); r.postI = i; }
+    let tg = r.aim;
+    if (!tg || tg.hp <= 0 || tg.flee || dist(tg, r) > 460) { tg = null; let bd = 460; for (const e of beasts) { if (e.flee || e.hp <= 0) continue; const k = dist(e, r); if (k < bd) { bd = k; tg = e; } } if (tg && tg !== r.aim) zap(); r.aim = tg; }
+    const goal = tg || r.post, gd = Math.hypot(goal.x - r.x, goal.y - r.y);
+    if (tg && gd < 200) {
+      r.path = null; r.moving = false; r.dir = "side"; r.flip = tg.x < r.x;
+      tg.hp -= 20 * (has("laser2") ? 1.25 : 1) * G.power.k * dt; lasers.push([r.x + (r.flip ? -16 : 16), r.y - 40, tg.x, tg.y - 30, G.power.k]);
+      if (tg.hp <= 0 && !tg.killed) { tg.killed = true; fx.push({ t: "boom", x: tg.x, y: tg.y - 30, life: .6 }); G.crystals += 5; fx.push({ t: "txt", x: tg.x, y: tg.y - 60, s: "+5 💎", life: 1 }); }
+    } else if (gd > 24) { if ((r.repath -= dt) <= 0 || !r.path) { r.repath = 1.2; r.path = findPath(r.x, r.y, goal.x, goal.y, false); } r.moving = followPath(r, 70, dt); if (r.moving) r.anim += dt * 12; }
+    else { r.moving = false; r.dir = "front"; }
+    if (!night && r.hp < r.max) r.hp = Math.min(r.max, r.hp + 3 * dt);
+  });
+  robots = robots.filter(r => { if (r.hp > 0) return true; fx.push({ t: "boom", x: r.x, y: r.y - 30, life: 1, big: true }); toast(T("robLost")); return false; });
   // buildings destroyed
   for (const b of buildings) if (b.hp <= 0 && !b.dead) { b.dead = true; markOcc(b.x, footY(b), b.r, 0); fx.push({ t: "boom", x: b.x, y: b.y - b.h * .4, life: 1, big: true }); if (b.type === "command") lose(); }
   buildings = buildings.filter(b => !b.dead);
   fx = fx.filter(f => (f.life -= dt) > 0);
   if (toastT > 0 && (toastT -= dt) <= 0) $("toast").style.display = "none";
   if (hintT < 1e8 && (hintT -= dt) <= 0) $("hint").classList.remove("show");
+}
+function catchDeer(d) {
+  deer = deer.filter(o => o !== d); zap();
+  if (has("capture") && G.animals < G.cap.slots) { G.animals++; fx.push({ t: "txt", x: d.x, y: d.y - 60, s: T("capt"), life: 1.5 }); fx.push({ t: "ring", x: d.x, y: d.y, c: "#fd6", life: .8 }); }
+  else { G.meat += 30; fx.push({ t: "txt", x: d.x, y: d.y - 60, s: T("meat"), life: 1.5 }); fx.push({ t: "boom", x: d.x, y: d.y - 30, life: .6 }); }
+  chime(1000);
 }
 function hurt(t, dmg) { t.hp -= dmg; if (t.kind === "a" && t.hp <= 0) { t.downT = 15; t.sel = false; t.job = null; t.carry = 0; t.path = null; toast(T("down")); updSelBtn(); } }
 function followPath(u, speed, dt) {
@@ -846,6 +1074,8 @@ function draw() {
   for (const o of wrecks) if (vis(o)) objs.push(o);
   for (const o of astros) if (!o.downT && vis(o)) objs.push(o);
   for (const o of beasts) if (vis(o)) objs.push(o);
+  for (const o of robots) if (vis(o)) objs.push(o);
+  for (const o of deer) if (vis(o)) objs.push(o);
   objs.sort((a, b) => a.y - b.y);
   for (const o of objs) {
     if (o.kind === "b") {
@@ -878,6 +1108,13 @@ function draw() {
       if (o.carry) { ctx.fillStyle = "#6ff"; ctx.beginPath(); ctx.arc(o.x + 10, o.y - 44, 5, 0, 6.283); ctx.fill(); }
       if (o.job && !o.path && !o.job.back && o.mineT > 0) bar(o.x, o.y - 72, 34, o.mineT / 2.4, "#6ff");
       if (o.hp < o.max) bar(o.x, o.y - 70, 30, o.hp / o.max, "#4f8");
+    } else if (o.kind === "r") {
+      shadow(o.x, o.y, 16, 6);
+      drawSprite("s_robot_" + o.dir, o.moving ? o.anim : 0, o.x, o.y + 2, o.dir === "side" ? 40 : 34, o.dir === "side" && o.flip);
+      if (o.hp < o.max) bar(o.x, o.y - 76, 34, o.hp / o.max, "#6cf");
+    } else if (o.kind === "h") {
+      shadow(o.x, o.y, 24, 7, .3);
+      drawSprite("s_deer_" + o.v, o.moving ? o.anim : 3, o.x, o.y + 4, 74 * o.s, o.flip);
     } else if (o.kind === "e") {
       const a = clamp(o.alpha, 0, 1); shadow(o.x, o.y, o.dir === "side" ? 46 : 26, 9, .4 * a);
       ctx.strokeStyle = `rgba(255,70,60,${.55 * a})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(o.x, o.y, o.dir === "side" ? 50 : 30, 12, 0, 0, 6.283); ctx.stroke();
@@ -909,6 +1146,7 @@ function draw() {
     const hole = (x, y, r, a) => { const sx = (x - cam.x) * cam.z + W / 2, sy = (y - cam.y) * cam.z + Hh / 2, rr = r * cam.z; if (sx < -rr || sy < -rr || sx > W + rr || sy > Hh + rr) return; const gr = g.createRadialGradient(sx, sy, 0, sx, sy, rr); gr.addColorStop(0, `rgba(0,0,0,${a})`); gr.addColorStop(1, "rgba(0,0,0,0)"); g.fillStyle = gr; g.fillRect(sx - rr, sy - rr, rr * 2, rr * 2); };
     for (const b of buildings) hole(b.x, b.y - b.h * .4, b.type === "command" ? 330 : 190, .85);
     for (const a of astros) if (!a.downT) hole(a.x, a.y - 20, 90, .7);
+    for (const r of robots) hole(r.x, r.y - 25, 95, .75);
     for (const d of deposits) if (d.amt > 0) hole(d.x, d.y - 20, 80, .55);
     for (const l of lasers) hole(l[2], l[3], 70, .8);
     for (const e of beasts) if (!e.flee) hole(e.x, e.y - 30, 85, .6);
@@ -926,12 +1164,17 @@ function drawMini() {
   for (const w of wrecks) { mctx.fillStyle = "#fc6"; mctx.fillRect(w.x * (mini.width / WORLD) - 2, w.y * (mini.width / WORLD) - 2, 4, 4); }
   for (const b of buildings) { mctx.fillStyle = "#fff"; const r = b.type === "command" ? 3 : 2; mctx.fillRect(b.x * s - r, b.y * s - r, r * 2, r * 2); }
   for (const a of astros) if (!a.downT) { mctx.fillStyle = "#7f7"; mctx.fillRect(a.x * s - 1, a.y * s - 1, 2, 2); }
+  for (const r of robots) { mctx.fillStyle = "#6cf"; mctx.fillRect(r.x * s - 1.5, r.y * s - 1.5, 3, 3); }
+  for (const d of deer) { mctx.fillStyle = "#fd6"; mctx.fillRect(d.x * s - 1, d.y * s - 1, 2, 2); }
   for (const e of beasts) { mctx.fillStyle = "#f44"; mctx.fillRect(e.x * s - 1.5, e.y * s - 1.5, 3, 3); }
   const v0 = toWorld(0, 0), v1 = toWorld(W, Hh); mctx.strokeStyle = "rgba(255,255,255,.8)"; mctx.lineWidth = 1; mctx.strokeRect(v0.x * s, v0.y * s, (v1.x - v0.x) * s, (v1.y - v0.y) * s);
 }
 function hud() {
   $("crys").textContent = "💎 " + (G.crystals | 0);
   $("crew").textContent = "👨‍🚀 " + astros.filter(a => !a.downT).length + "/" + G.maxCrew;
+  const C = G.cap, lim = Math.min(C.o, C.g, C.p), full = astros.length >= G.maxCrew, col = v => full && v === lim && v === G.maxCrew ? "color:#ffb27a" : "";
+  $("life").style.display = cmd() && G.tut > 4 ? "" : "none";
+  if (C.o != null) $("life").innerHTML = `<span style="${col(C.o)}">🫧${C.o}</span> <span style="${col(C.g)}">🥬${C.g}</span> <span style="${col(C.p)}">🍖${C.p}</span>` + (C.slots ? ` <span>🐐${G.animals}/${C.slots}</span>` : "");
   $("pow").textContent = "⚡ " + Math.round(G.power.prod) + "/" + G.power.use; $("pow").style.color = G.power.k < 1 ? "#f86" : "";
   // tutorial hand pointer
   const hand = $("hand"), tg = (!G.paused && G.tut >= 1 && G.tut <= 9) ? tutTarget() : null;
@@ -959,7 +1202,7 @@ function frame(ts) {
   requestAnimationFrame(frame);
   try { if (!G.paused && !G.over) update(dt); draw(); hud(); if (bldSel && G.t - (G.upRef || 0) > .5) { G.upRef = G.t; refreshUp(); } } catch (e) { console.error(e); }
 }
-document.addEventListener("visibilitychange", () => { if (document.hidden) { if (!G.paused) { G.paused = true; G.autoPaused = true; } bv.pause(); } else if (G.autoPaused) { G.autoPaused = false; G.paused = false; if (buildings.some(b => !b.built) && bvOk) bv.play().catch(() => { }); } });
+document.addEventListener("visibilitychange", () => { if (document.hidden) { if (!G.paused) { G.paused = true; G.autoPaused = true; } if (curV) curV.pause(); } else if (G.autoPaused) { G.autoPaused = false; G.paused = false; if (buildings.some(b => !b.built) && bvOk && curV) curV.play().catch(() => { }); } });
 
 async function boot() {
   resize(); await loadAll(); makePats();
@@ -970,7 +1213,7 @@ async function boot() {
   if (!localStorage.getItem("iv_intro") && !/nointro/.test(location.search)) playIntro(go); else go();
   requestAnimationFrame(frame);
 }
-window.__G = () => ({ G, buildings, astros, beasts, deposits, wrecks, cam, TH }); window.__open = w => openWreck(w); window.__openB = b => openBuilding(b); window.__bld = () => bldSel;
+window.__G = () => ({ G, buildings, astros, beasts, deposits, wrecks, cam, TH, robots, deer, herds }); window.__add = (t, x, y) => addBuilding(t, x, y, true); window.__rob = () => { const p = robotPost(robots.length); return addRobot(p.x, p.y); }; window.__spot = t => findSpot(t); window.reachAt = (i, j) => reach[j * N + i] && walk[j * N + i]; window.__catch = d => catchDeer(d); window.__open = w => openWreck(w); window.__openB = b => openBuilding(b); window.__bld = () => bldSel;
 boot();
 </script>
 </body>
