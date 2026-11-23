@@ -264,6 +264,7 @@ function toast(m) { if (ERRK.some(k => TX[k] && TX[k].includes(m))) sfx("error")
 // ============================================================ audio
 // Each effect plays assets/sfx_<name>.mp3 when that file exists; until then a short synthesized stand-in is used.
 let AC = null, MASTER = null, MUTE = localStorage.getItem("iv_mute") === "1";
+const SFXV = { click: .45, select: .55, order: .65, laser: .5, coin: .7, error: .7, alarm: .8, roar: .9 };
 const SFXN = ["click", "select", "order", "build", "done", "upgrade", "coin", "laser", "boom", "alarm", "dawn", "research", "error", "roar"], SFX = {}, sfxLast = {};
 function ac() {
   if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); MASTER = AC.createGain(); MASTER.gain.value = MUTE ? 0 : 1; MASTER.connect(AC.destination); for (const n of SFXN) fetch("assets/sfx_" + n + ".mp3").then(r => r.ok ? r.arrayBuffer() : null).then(b => b && AC.decodeAudioData(b)).then(buf => { if (buf) SFX[n] = buf; }).catch(() => { }); } catch (e) { } }
@@ -304,7 +305,7 @@ const SYNTH = {
 function sfx(n, vol) {
   const a = ac(); if (!a || MUTE) return; const now = performance.now(); if (now - (sfxLast[n] || 0) < 70) return; sfxLast[n] = now;
   try {
-    if (SFX[n]) { const src = a.createBufferSource(), g = a.createGain(); src.buffer = SFX[n]; g.gain.value = vol == null ? 1 : vol; src.connect(g).connect(MASTER); src.start(); }
+    if (SFX[n]) { const src = a.createBufferSource(), g = a.createGain(); src.buffer = SFX[n]; g.gain.value = (vol == null ? 1 : vol) * (SFXV[n] || 1); src.connect(g).connect(MASTER); src.start(); }
     else SYNTH[n] && SYNTH[n]();
   } catch (e) { }
 }
