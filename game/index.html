@@ -379,7 +379,9 @@ function hAt(wx, wy) { // bilinear height at world px
 }
 const cellOf = (x, y) => [clamp(Math.floor(x / CELL), 0, N - 1), clamp(Math.floor(y / CELL), 0, N - 1)];
 const free = (cx, cy) => cx >= 0 && cy >= 0 && cx < N && cy < N && walk[cy * N + cx] && !occ[cy * N + cx];
-function markOcc(x, y, r, v) { const [a, b] = cellOf(x - r, y - r), [c, d] = cellOf(x + r, y + r); for (let j = b; j <= d; j++) for (let i = a; i <= c; i++) if (Math.hypot((i + .5) * CELL - x, (j + .5) * CELL - y) < r) occ[j * N + i] = v; }
+// building footprints are ellipses (flatter than wide), matching the top-down perspective of the art
+const OCY = .62, footD = (x, y, fx, fy) => Math.hypot(x - fx, (y - fy) / OCY);
+function markOcc(x, y, r, v) { const [a, b] = cellOf(x - r, y - r * OCY), [c, d] = cellOf(x + r, y + r * OCY); for (let j = b; j <= d; j++) for (let i = a; i <= c; i++) if (footD((i + .5) * CELL, (j + .5) * CELL, x, y) < r) occ[j * N + i] = v; }
 
 // ============================================================ terrain chunks
 const CH = 512, chunks = new Map();
@@ -840,7 +842,7 @@ function menuPick(k) {
 function ghostOk() {
   if (!ghost) return false; const d = BT[ghost.type], im = A[d.img], h = d.w * im.height / im.width, fy = ghost.y - h * .18;
   const [a, b] = cellOf(ghost.x - d.r, fy - d.r), [c2, d2] = cellOf(ghost.x + d.r, fy + d.r);
-  for (let j = b; j <= d2; j++) for (let i = a; i <= c2; i++) if (Math.hypot((i + .5) * CELL - ghost.x, (j + .5) * CELL - fy) < d.r && (!free(i, j) || !reach[j * N + i])) return false;
+  for (let j = b; j <= d2; j++) for (let i = a; i <= c2; i++) if (footD((i + .5) * CELL, (j + .5) * CELL, ghost.x, fy) < d.r && (!free(i, j) || !reach[j * N + i])) return false;
   if (ghost.type === "water" && !nearLake(ghost.x, fy, d.r + 45)) return false;
   return true;
 }
@@ -1011,10 +1013,10 @@ function update(dt) {
     }
     if (j && !a.path) {
       if (j.back) { // deliver
-        if (c && Math.hypot(a.x - c.x, a.y - (c.y + 30)) < 200) { G.crystals += a.carry; a.carry = 0; j.back = false; sfx("coin", .6); fx.push({ t: "txt", x: a.x, y: a.y - 70, s: "+10 💎", life: 1.2 }); if (j.dep.amt > 0) goTo(a, j.dep.x, j.dep.y + 26); else a.job = null; }
+        if (c && footD(a.x, a.y, c.x, footY(c)) < c.r + 55) { G.crystals += a.carry; a.carry = 0; j.back = false; sfx("coin", .6); fx.push({ t: "txt", x: a.x, y: a.y - 70, s: "+10 💎", life: 1.2 }); if (j.dep.amt > 0) goTo(a, j.dep.x, j.dep.y + 26); else a.job = null; }
         else if (c) goTo(a, c.x, c.y + 130);
       } else if (j.dep.amt <= 0) a.job = null;
-      else if (Math.hypot(a.x - j.dep.x, a.y - j.dep.y) < 80) { a.mineT += dt; if (a.mineT > 2.4) { a.mineT = 0; const take = Math.min(10, j.dep.amt); j.dep.amt -= take; a.carry = take; j.back = true; if (c) goTo(a, c.x + (Math.random() - .5) * 120, c.y + 130); } }
+      else if (Math.hypot(a.x - j.dep.x, a.y - j.dep.y) < 80) { a.mineT += dt; if (a.mineT > 2.4) { a.mineT = 0; const take = Math.min(10, j.dep.amt); j.dep.amt -= take; a.carry = take; j.back = true; if (c) goTo(a, c.x + (Math.random() - .5) * 120, footY(c) + c.r * OCY + 16); } }
       else goTo(a, j.dep.x, j.dep.y + 26);
     }
     a.moving = moving; if (moving) a.anim += dt * 13;
@@ -1048,7 +1050,7 @@ function update(dt) {
     }
     const t = e.tgt; if (!t) continue;
     const reachD = (t.kind === "b" ? t.r + 30 : 34);
-    const dd = Math.hypot(e.x - t.x, e.y - (t.kind === "b" ? footY(t) : t.y));
+    const dd = t.kind === "b" ? footD(e.x, e.y, t.x, footY(t)) : Math.hypot(e.x - t.x, e.y - t.y);
     e.hitT = Math.max(0, (e.hitT || 0) - dt);
     if (dd < reachD + 18) {
       e.path = null; e.moving = false; e.atk = true; e.anim += dt * 9;
@@ -1294,7 +1296,8 @@ function playIntro(done) {
   const times = [[4.3, 8.4], [8.9, 12.6], [15.9, 20.2], [23.3, 28.6], [31, 35]], lines = TX.subs[AR ? 0 : 1];
   v.src = "assets/v_intro.mp4"; v.currentTime = 0; v.muted = false;
   let fin = false; const end = () => { if (fin) return; fin = true; v.pause(); box.classList.remove("show"); sub.textContent = ""; localStorage.setItem("iv_intro", "1"); done && done(); };
-  v.ontimeupdate = () => { const t = v.currentTime; const i = times.findIndex(([a, b]) => t >= a && t <= b); sub.textContent = i >= 0 ? lines[i] : ""; };
+  sub.classList.toggle("cover", !AR);
+  v.ontimeupdate = () => { if (AR) return; const t = v.currentTime; const i = times.findIndex(([a, b]) => t >= a && t <= b); sub.textContent = i >= 0 ? lines[i] : ""; };
   v.onended = end; v.onerror = end; $("skip").onclick = end;
   v.play().catch(() => { v.muted = true; v.play().catch(end); });
 }
