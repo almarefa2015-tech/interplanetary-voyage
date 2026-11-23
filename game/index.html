@@ -373,7 +373,15 @@ const CH = 512, chunks = new Map();
 let pats = null;
 function makePats() {
   pats = {};
-  for (const k of ["ground", "sand", "grass", "cliff", "water"]) pats[k] = ctx.createPattern(A["tex_" + k], "repeat");
+  // calmer map: textures are desaturated and slightly darkened once, at load
+  const TONE = { ground: [.6, .9], sand: [.55, .9], grass: [.5, .86], cliff: [.6, .9], water: [.7, .9] };
+  for (const k of ["ground", "sand", "grass", "cliff", "water"]) {
+    const im = A["tex_" + k], c = document.createElement("canvas"); c.width = im.width; c.height = im.height;
+    const g = c.getContext("2d"); g.drawImage(im, 0, 0);
+    const [sat, br] = TONE[k], d = g.getImageData(0, 0, c.width, c.height), p = d.data;
+    for (let i = 0; i < p.length; i += 4) { const l = .3 * p[i] + .59 * p[i + 1] + .11 * p[i + 2]; for (let j = 0; j < 3; j++) p[i + j] = (l + (p[i + j] - l) * sat) * br; }
+    g.putImageData(d, 0, 0); pats[k] = ctx.createPattern(c, "repeat");
+  }
 }
 function renderChunk(cx, cy) {
   const c = document.createElement("canvas"); c.width = c.height = CH; const g = c.getContext("2d");
