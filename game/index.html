@@ -237,7 +237,7 @@ const PLAY_URL = "https://play.google.com/store/apps/details?id=com.interplaneta
 const A = {};
 const IMG = ["tex_ground", "tex_sand", "tex_grass", "tex_cliff", "tex_water", "b_command", "b_tower", "b_power", "b_oxygen", "b_quarters", "b_greenhouse", "b_wreck", "p_tree", "p_crystal", "p_rock",
   "s_astro_front", "s_astro_back", "s_astro_side", "s_beast_front", "s_beast_side",
-  "b_water", "b_research", "b_agrilab", "b_farm", "b_transformer", "b_nuclear", "b_factory", "s_robot_front", "s_robot_back", "s_robot_side", "s_deer_a", "s_deer_b"];
+  "b_water", "b_research", "b_agrilab", "b_farm", "b_transformer", "b_nuclear", "b_factory", "s_robot_front", "s_robot_back", "s_robot_side", "s_deer_a", "s_deer_b", "s_beast_back"];
 function loadAll() {
   return Promise.all(IMG.map(n => new Promise(res => {
     const i = new Image();
@@ -246,7 +246,7 @@ function loadAll() {
     i.src = "assets/" + n + (n.startsWith("tex_") ? ".jpg" : ".png");
   })));
 }
-const SHEET = { s_astro_front: 12, s_astro_back: 12, s_astro_side: 12, s_beast_front: 12, s_beast_side: 12, s_robot_front: 12, s_robot_back: 12, s_robot_side: 12, s_deer_a: 12, s_deer_b: 12 };
+const SHEET = { s_astro_front: 12, s_astro_back: 12, s_astro_side: 12, s_beast_front: 12, s_beast_side: 12, s_robot_front: 12, s_robot_back: 12, s_robot_side: 12, s_deer_a: 12, s_deer_b: 12, s_beast_back: 12 };
 
 // ============================================================ helpers
 const cv = document.getElementById("cv"), ctx = cv.getContext("2d");
@@ -1053,7 +1053,7 @@ function update(dt) {
     if (dd < reachD + 18) {
       e.path = null; e.moving = false; e.atk = true; e.anim += dt * 9;
       const ty = t.kind === "b" ? footY(t) : t.y, ax = t.x - e.x, ay = ty - e.y;
-      if (Math.abs(ax) > Math.abs(ay) * .8 || ay < 0) { e.dir = "side"; e.flip = ax < 0; } else e.dir = "front";
+      if (Math.abs(ax) > Math.abs(ay) * .8) { e.dir = "side"; e.flip = ax < 0; } else e.dir = ay > 0 ? "front" : "back";
       e.lx = ax; e.ly = ay;
       if (e.cd <= 0) {
         e.cd = 1.1; e.hitT = .3; hurt(t, 14 + G.day * 2);
@@ -1214,7 +1214,7 @@ function draw() {
       const a = clamp(o.alpha, 0, 1); shadow(o.x, o.y, o.dir === "side" ? 46 : 26, 9, .4 * a);
       ctx.strokeStyle = `rgba(255,70,60,${.55 * a})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(o.x, o.y, o.dir === "side" ? 50 : 30, 12, 0, 0, 6.283); ctx.stroke();
       let lx = 0, ly = 0; if (o.atk && o.hitT > 0) { const q = Math.sin(o.hitT / .3 * Math.PI) * 22, L = Math.hypot(o.lx, o.ly) || 1; lx = o.lx / L * q; ly = o.ly / L * q; }
-      drawSprite("s_beast_" + (o.dir === "front" ? "front" : "side"), o.moving || o.atk ? o.anim : 0, o.x + lx, o.y + 4 + ly, o.dir === "front" ? 58 : 150, o.flip, a);
+      drawSprite("s_beast_" + o.dir, o.moving || o.atk ? o.anim : 0, o.x + lx, o.y + 4 + ly, o.dir === "front" ? 58 : o.dir === "back" ? 46 : 150, o.dir === "side" && o.flip, a);
       if (o.hp < o.max) bar(o.x, o.y - 90, 50, o.hp / o.max, "#f54");
     }
   }
