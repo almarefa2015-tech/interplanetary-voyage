@@ -1119,8 +1119,10 @@ function followPath(u, speed, dt) {
   const p = u.path[0], dx = p.x - u.x, dy = p.y - u.y, d = Math.hypot(dx, dy), s = speed * dt;
   if (d <= s) { u.x = p.x; u.y = p.y; u.path.shift(); if (!u.path.length) u.path = null; }
   else { u.x += dx / d * s; u.y += dy / d * s; }
-  if (Math.abs(dx) > Math.abs(dy) * 1.2) { u.dir = "side"; u.flip = dx < 0; } else u.dir = dy > 0 ? "front" : (u.kind === "e" ? "side" : "back");
-  if (u.kind === "e" && u.dir === "side") u.flip = dx < 0;
+  // facing: diagonals use the side view, and a new facing must hold briefly before it switches (no flicker)
+  const want = Math.abs(dx) > Math.abs(dy) * .75 ? "side" : dy > 0 ? "front" : (u.kind === "e" && !A.s_beast_back ? "side" : "back");
+  if (want !== u.dir) { u.dirT = (u.dirT || 0) + dt; if (u.dirT > .15 || !u.dir) { u.dir = want; u.dirT = 0; } } else u.dirT = 0;
+  if (u.dir === "side" && Math.abs(dx) > 1) u.flip = dx < 0;
   return true;
 }
 function spawnWave() {
